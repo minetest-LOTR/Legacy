@@ -3,7 +3,7 @@
 local mapgen_name = minetest.get_mapgen_setting("mg_name")
 
 if mapgen_name == "singlenode" then
-	minetest.set_mapgen_setting("mg_name", "v7", true)
+	minetest.set_mapgen_setting("mg_name", "singlenode", true)
 elseif mapgen_name == "v6" then
 	minetest.log("warning", "[LOTT] v6 mapgen is not fully tested, use at own risk or use other mapgens!")
 end
