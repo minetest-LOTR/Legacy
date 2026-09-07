@@ -1,4 +1,4 @@
-![header](https://raw.githubusercontent.com/minetest-LOTT/Legacy/master/menu/header.png)
+![header](https://raw.githubusercontent.com/minetest-LOTR/Legacy/master/menu/header.png)
 ## Lord of the Test: Legacy
 
 An experimental fork-continuation of original Lord of the Test that breaks compatibility and promises nothing. Lord of the Test's what if?
