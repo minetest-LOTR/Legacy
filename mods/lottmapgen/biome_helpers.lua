@@ -1,7 +1,7 @@
 
 -- retrieve biome data
 local modpath = core.get_modpath(core.get_current_modname())
-local biome_data = lottmapgen.load_compressed(modpath .. "/biomes.bin.zlib")
+local biome_data = lottmapgen.load_compressed(modpath .. "/mapdata/biomes.bin.zlib")
 
 -- raw bioem data
 function lottmapgen.get_biome_raw(px, pz)

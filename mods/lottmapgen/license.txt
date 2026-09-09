@@ -1,18 +1,15 @@
 Authors of source code:
 -----------------------
 (LOTT-specific-mod)
-Original Author(s):
-	paramat (WTFPL)
-		https://github.com/paramat/paragenv7
 LOTT Modifications By:
-	fishyWET (LGPL v2.1)
+	wrynvera (LGPL v2.1)
 	Amaz (LGPL v2.1)
 	Dyarr (LGPL v2.1)
 	gwtnz (LGPL v2.1)
 
 Authors of media files
 -----------------------
-fishyWET (CC BY-SA 3.0)
+wrynvera (CC BY-SA 3.0)
 	abandoned_fort.mts
 	abandoned_tower.mts
 	gondorfort.we

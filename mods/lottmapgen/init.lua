@@ -37,9 +37,9 @@ local c_morstone = core.get_content_id("lottmapgen:mordor_stone")
 -- =========================
 -- retrieve data
 -- =========================
-local height_data = lottmapgen.load_compressed(modpath .. "/height.bin.zlib")
-local water_data = lottmapgen.load_compressed(modpath .. "/wmask.bin.zlib")
-local mountain_data = lottmapgen.load_compressed(modpath .. "/mmask.bin.zlib")
+local height_data = lottmapgen.load_compressed(modpath .. "/mapdata/height.bin.zlib")
+local water_data = lottmapgen.load_compressed(modpath .. "/mapdata/wmask.bin.zlib")
+local mountain_data = lottmapgen.load_compressed(modpath .. "/mapdata/mmask.bin.zlib")
 
 function lottmapgen.get_height(px, pz)
     return lottmapgen.sample_bilinear(
