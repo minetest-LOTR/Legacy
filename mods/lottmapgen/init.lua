@@ -75,7 +75,9 @@ dofile(minetest.get_modpath("lottmapgen").."/noise.lua")
 dofile(minetest.get_modpath("lottmapgen").."/biome_helpers.lua")
 
 -- BIOME DECORATION
+dofile(minetest.get_modpath("lottmapgen").."/biome_api.lua")
 dofile(minetest.get_modpath("lottmapgen").."/biome_deco.lua")
+dofile(minetest.get_modpath("lottmapgen").."/biomes.lua")
 
 -- =========================
 -- MAPGEN

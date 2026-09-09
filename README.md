@@ -30,7 +30,7 @@ Additional contributors *(who are not listed above due to them not pushing their
 - Thomas-S (@Thomas--S)
 
 minetest-LOTR Members:
-- wryvera (@wrynvera)
+- wrynvera (@wrynvera)
 - Amaz (@Amaz1)
 - Lumidify Productions (@lumidify)
 
