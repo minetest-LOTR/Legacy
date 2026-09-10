@@ -1,11 +1,11 @@
 lottclasses = {}
 lottclasses.race = {}
-lottclasses.race["wizard"] = {"GAMEwizard", "wizards", "Wizard"}
-lottclasses.race["dwarf"] = {"GAMEdwarf", "dwarves", "Dwarf"}
-lottclasses.race["elf"] = {"GAMEelf", "elves", "Elf"}
-lottclasses.race["man"] = {"GAMEman", "men", "Man"}
-lottclasses.race["hobbit"] = {"GAMEhobbit", "hobbits", "Hobbit"}
-lottclasses.race["orc"] = {"GAMEorc", "orcs", "Orc"}
+lottclasses.race["wizard"] = 	{"GAMEwizard", 	"wizards", 	"Wizard", 	nil}
+lottclasses.race["dwarf"] = 	{"GAMEdwarf", 	"dwarves", 	"Dwarf", 	{107}}
+lottclasses.race["elf"] = 		{"GAMEelf", 	"elves", 	"Elf", 		{106}}
+lottclasses.race["man"] = 		{"GAMEman", 	"men", 		"Man", 		{110, 111}}
+lottclasses.race["hobbit"] = 	{"GAMEhobbit", 	"hobbits", 	"Hobbit", 	{103}}
+lottclasses.race["orc"] = 		{"GAMEorc", 	"orcs", 	"Orc", 		{100, 113}}
 
 -- create race privileges
 for races, rdata in pairs(lottclasses.race) do
@@ -162,6 +162,163 @@ local function set_race(name, race)
 	minetest.chat_send_player(name, "You are now a member of the race of "..lottclasses.race[race][2]..", go forth into the world.")
 end
 
+local function biome_allowed(biome_id, allowed)
+    -- nil means any land biome
+    if allowed == nil then
+        return biome_id ~= 0 and biome_id ~= 1
+    end
+
+    for _, id in ipairs(allowed) do
+        if biome_id == id then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function find_surface_y(x, z, min_y, max_y)
+    for y = max_y, min_y, -1 do
+        local node = minetest.get_node_or_nil({
+            x = x,
+            y = y,
+            z = z
+        })
+
+        local above = minetest.get_node_or_nil({
+            x = x,
+            y = y + 1,
+            z = z
+        })
+
+        if node and above then
+            local def = minetest.registered_nodes[node.name]
+
+            if def
+            and def.walkable
+            and above.name == "air" then
+                return y
+            end
+        end
+    end
+
+    return nil
+end
+
+
+local function set_spawn_location(player, race)
+    if not lottmapgen then
+        minetest.log(
+            "error",
+            "[lottclasses] lottmapgen unavailable for race spawning"
+        )
+        return false
+    end
+
+    local race_def = lottclasses.race[race]
+
+    if not race_def then
+        return false
+    end
+
+    local allowed_biomes = race_def[4]
+
+    for attempt = 1, 10000 do
+        local px = math.random(0, lottmapgen.MAP_WIDTH - 1)
+        local pz = math.random(0, lottmapgen.MAP_HEIGHT - 1)
+
+        local biome_id =
+            lottmapgen.get_biome_raw(px, pz)
+
+        if biome_allowed(biome_id, allowed_biomes) then
+
+            local wx, wz =
+                lottmapgen.get_world_coords(px, pz)
+
+            wx = wx + math.random(0, lottmapgen.MAP_SCALE - 1)
+            wz = wz + math.random(0, lottmapgen.MAP_SCALE - 1)
+
+            wx = math.floor(wx)
+            wz = math.floor(wz)
+
+            local actual_biome =
+                lottmapgen.get_biome_id(wx, wz)
+
+            if biome_allowed(actual_biome, allowed_biomes) then
+                local approx_y =
+                    math.floor(lottmapgen.get_height(wx, wz))
+
+                local min_y = approx_y - 256
+                local max_y = approx_y + 256
+
+                minetest.log(
+                    "warning",
+                    "[lottclasses] emerging spawn area at "
+                    .. wx .. ", " .. wz
+                )
+
+                minetest.emerge_area(
+                    {
+                        x = wx - 16,
+                        y = min_y,
+                        z = wz - 16
+                    },
+                    {
+                        x = wx + 16,
+                        y = max_y,
+                        z = wz + 16
+                    },
+
+                    function(blockpos, action, calls_remaining)
+
+                        if calls_remaining ~= 0 then
+                            return
+                        end
+
+                        local surface_y =
+                            find_surface_y(
+                                wx,
+                                wz,
+                                min_y,
+                                max_y
+                            )
+
+                        if not surface_y then
+                            minetest.log(
+                                "error",
+                                "[lottclasses] failed to find surface after emerge"
+                            )
+                            return
+                        end
+
+                        player:set_pos({
+                            x = wx,
+                            y = surface_y + 1,
+                            z = wz
+                        })
+
+                        minetest.log(
+                            "warning",
+                            "[lottclasses] spawn success at "
+                            .. wx .. ", "
+                            .. surface_y .. ", "
+                            .. wz
+                        )
+                    end
+                )
+
+                return true
+            end
+        end
+    end
+
+    minetest.log(
+        "error",
+        "[lottclasses] failed to find suitable biome spawn"
+    )
+    return false
+end
+
 minetest.register_on_player_receive_fields(function(player, formname, fields)
 	if formname ~= "race_selector" then return end
 	local name = player:get_player_name()
@@ -173,6 +330,9 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 				set_race(name, races)
 				update_skin(player)
 				give_initial_stuff(player, races)
+				if lottmapgen and lottmapgen.get_biome_id then
+					set_spawn_location(player, races)
+				end
 				minetest.log("action", name.." chose to be a male "..races)
 				return
 			end
@@ -184,6 +344,9 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 				set_race(name, races)
 				update_skin(player)
 				give_initial_stuff(player, races)
+				if lottmapgen and lottmapgen.get_biome_id then
+					set_spawn_location(player, races)
+				end
 				minetest.log("action", name.. " chose to be a female " .. races)
 				return
 			end

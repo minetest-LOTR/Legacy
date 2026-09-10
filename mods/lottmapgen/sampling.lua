@@ -1,10 +1,20 @@
 
+-- get map from world
 function lottmapgen.get_map_coords(wx, wz)
     local half_w = (lottmapgen.MAP_WIDTH * lottmapgen.MAP_SCALE) / 2
     local half_h = (lottmapgen.MAP_HEIGHT * lottmapgen.MAP_SCALE) / 2
     local ix = (half_w - wx) / lottmapgen.MAP_SCALE
     local iz = (wz + half_h) / lottmapgen.MAP_SCALE
     return ix, iz
+end
+
+-- get world from map
+function lottmapgen.get_world_coords(ix, iz)
+    local half_w = (lottmapgen.MAP_WIDTH * lottmapgen.MAP_SCALE) / 2
+    local half_h = (lottmapgen.MAP_HEIGHT * lottmapgen.MAP_SCALE) / 2
+    local wx = half_w - ix * lottmapgen.MAP_SCALE
+    local wz = iz * lottmapgen.MAP_SCALE - half_h
+    return wx, wz
 end
 
 function lottmapgen.sample_byte(data, px, pz, fallback)
