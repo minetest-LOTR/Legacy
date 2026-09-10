@@ -55,7 +55,20 @@ People who played a significant role in the development and history of Lord of t
         <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
             width="80" height="80" alt="Flipsels"><br>
         <b>Flipsels</b><br>
-        <sub>Code & Textures<br>Armors/Clothing</sub>
+        <sub>Code & Textures<br>Armors, Clothing, GUI</sub>
+    </td>
+    <td align="center">
+        <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
+            width="80" height="80" alt="AspireMint"><br>
+        <b>AspireMint</b><br>
+        <sub>Models & Buildings<br>Mobs</sub>
+    </td>
+    <td align="center">
+      <a href="https://github.com/philipbenr">
+        <img src="https://github.com/philipbenr.png?size=80" width="80" alt="catninja-"><br>
+        <b>philipbenr</b>
+      </a><br>
+      <sub>Textures<br>Flora, Decorations</sub>
     </td>
   </tr>
 </table>
