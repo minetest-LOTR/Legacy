@@ -213,7 +213,7 @@ local function set_spawn_location(player, race)
             wz = math.floor(wz)
 
             local actual_biome =
-                lottmapgen.get_biome_id(wx, wz)
+                lottmapgen.get_blended_biome_id(wx, wz)
 
             if biome_allowed(actual_biome, allowed_biomes) then
                 local approx_y =
@@ -256,7 +256,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 				set_race(name, races)
 				update_skin(player)
 				give_initial_stuff(player, races)
-				if lottmapgen and lottmapgen.get_biome_id then
+				if lottmapgen and lottmapgen.get_blended_biome_id then
 					set_spawn_location(player, races)
 				end
 				minetest.log("action", name.." chose to be a male "..races)
@@ -270,7 +270,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 				set_race(name, races)
 				update_skin(player)
 				give_initial_stuff(player, races)
-				if lottmapgen and lottmapgen.get_biome_id then
+				if lottmapgen and lottmapgen.get_blended_biome_id then
 					set_spawn_location(player, races)
 				end
 				minetest.log("action", name.. " chose to be a female " .. races)

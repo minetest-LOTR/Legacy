@@ -227,45 +227,46 @@ core.register_on_generated(function(minp, maxp)
     -- =========================
     -- TERRAIN PASS
     -- =========================
-    for z = minp.z, maxp.z do
-        for x = minp.x, maxp.x do
+	for z = minp.z, maxp.z do
+		for x = minp.x, maxp.x do
 
-            local biome_id = lottmapgen.get_biome_id(x, z)
-            local ground_y = lottmapgen.get_terrain_height(x, z)
-            local surface, filler = lottmapgen.get_surface_nodes(biome_id)
+			local raw_biome_id = lottmapgen.get_raw_biome_id(x, z)
+			local biome_id = lottmapgen.get_blended_biome_id(x, z)
 
-            for y = minp.y, maxp.y do
+			local ground_y = lottmapgen.get_terrain_height(x, z)
+			local surface, filler = lottmapgen.get_surface_nodes(biome_id)
 
-                local vi =
-                    area:index(
-                        x,
-                        y,
-                        z
-                    )
+			for y = minp.y, maxp.y do
+				local vi =
+					area:index(
+						x,
+						y,
+						z
+					)
 
-                if y <= ground_y - 4 then
+				if y <= ground_y - 4 then
+					-- deep geology uses the raw biome
+					-- (to prevent awkward columns of stone)
+					if raw_biome_id == 113 then
+						data[vi] = c_morstone
+					else
+						data[vi] = c_stone
+					end
 
-                    if biome_id == 113 then
-                        data[vi] = c_morstone
-                    else
-                        data[vi] = c_stone
-                    end
-
-                elseif y <= ground_y - 1 then
-                    data[vi] = filler
-
-                elseif y == ground_y and ground_y >= lottmapgen.WATER_LEVEL then
-                    data[vi] = surface
-
-                elseif y <= lottmapgen.WATER_LEVEL then
-                    data[vi] = c_water
-
-                -- else
-                --     data[vi] = c_air
-                end
-            end
-        end
-    end
+				elseif y <= ground_y - 1 then
+					-- surface layers use the blended biome.
+					data[vi] = filler
+				elseif y == ground_y
+				and ground_y >= lottmapgen.WATER_LEVEL then
+					data[vi] = surface
+				elseif y <= lottmapgen.WATER_LEVEL then
+					data[vi] = c_water
+				-- else
+				--     data[vi] = c_air
+				end
+			end
+		end
+	end
 
     -- =========================
     -- DECORATION PASS
@@ -275,29 +276,31 @@ core.register_on_generated(function(minp, maxp)
     -- to prevent columns to erase parts
     -- of trees that extend horizontally.
     --
-    for z = minp.z, maxp.z do
-        for x = minp.x, maxp.x do
-            local biome_id = lottmapgen.get_biome_id(x, z)
+	for z = minp.z, maxp.z do
+		for x = minp.x, maxp.x do
 
-            if biome_id >= 100 then
-                local ground_y = lottmapgen.get_terrain_height(x, z)
+			local biome_id = lottmapgen.get_blended_biome_id(x, z)
 
-                if ground_y >= lottmapgen.WATER_LEVEL
-                and ground_y >= minp.y
-                and ground_y <= maxp.y then
-                    lottmapgen.decorate_surface(
-                        biome_id,
-                        x,
-                        ground_y,
-                        z,
-                        area,
-                        data,
-                        p2data
-                    )
-                end
-            end
-        end
-    end
+			if biome_id >= 100 then
+				local ground_y =
+					lottmapgen.get_terrain_height(x, z)
+
+				if ground_y >= lottmapgen.WATER_LEVEL
+				and ground_y >= minp.y
+				and ground_y <= maxp.y then
+					lottmapgen.decorate_surface(
+						biome_id,
+						x,
+						ground_y,
+						z,
+						area,
+						data,
+						p2data
+					)
+				end
+			end
+		end
+	end
 
     -- =========================
     -- WRITE
