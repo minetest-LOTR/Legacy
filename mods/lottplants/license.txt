@@ -2,7 +2,7 @@ Authors of source code:
 -----------------------
 (LOTT-specific-mod)
 Original Author(s):
-	fishyWET (LGPL v2.1)
+	wrynvera (LGPL v2.1)
 
 
 Authors of media files
@@ -16,5 +16,13 @@ philipbenr (CC BY-SA 3.0)
 pithy
 	lottplants_*tree_stair.png (Based on lottplants_*tree.png)
 
-fishyWET (CC BY-SA 3.0)
+Ironzorg, VanessaE (WTFPL) (from minetest_game 0.4 mod: flowers)
+    lottplants_dandelion_white.png
+    lottplants_dandelion_yellow.png
+    lottplants_geranium.png
+    lottplants_rose.png
+    lottplants_tulip.png
+    lottplants_viola.png
+
+wrynvera (CC BY-SA 3.0)
 	Everything else

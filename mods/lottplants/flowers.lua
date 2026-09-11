@@ -276,27 +276,6 @@ minetest.register_node("lottplants:seregon", {
 	},
 })
 
-local default_flowers = {
-	"dandelion_white",
-	"dandelion_yellow",
-	"geranium",
-	"tulip",
-	"rose",
-	"viola",
-}
-
-for _, v in pairs(default_flowers) do
-	minetest.override_item("flowers:" .. v, {
-		drop = {
-			max_items = 1,
-			items = {
-				{items = {'lottplants:honey'}, rarity = 20},
-				{items = {"flowers:" .. v}},
-			}
-		}
-	})
-end
-
 minetest.register_alias("lottplants:anemones_fake", "lottplants:anemones")
 minetest.register_alias("lottplants:asphodel_fake", "lottplants:asphodel")
 minetest.register_alias("lottplants:eglantive_fake", "lottplants:eglantive")
@@ -306,3 +285,154 @@ minetest.register_alias("lottplants:lissuin_fake", "lottplants:lissuin")
 minetest.register_alias("lottplants:mallos_fake", "lottplants:mallos")
 minetest.register_alias("lottplants:niphredil_fake", "lottplants:niphredil")
 minetest.register_alias("lottplants:seregon_fake", "lottplants:seregon")
+
+-- from minetest_game flowers
+minetest.register_node("lottplants:dandelion_white", {
+	description = "White Dandelion",
+	drawtype = "plantlike",
+	tiles = { "lottplants_dandelion_white.png" },
+	inventory_image = "lottplants_dandelion_white.png",
+	wield_image = "lottplants_dandelion_white.png",
+	sunlight_propagates = true,
+	paramtype = "light",
+	walkable = false,
+	buildable_to = true,
+    drop = {
+		max_items = 2,
+		items = {
+			{ items = {'lottplants:dandelion_white'} },
+			{ items = {'lottplants:honey'}, rarity = 20},
+		}
+	},
+	groups = {snappy=3,flammable=2,flower=1,flora=1,attached_node=1,color_white=1},
+	sounds = default.node_sound_leaves_defaults(),
+	selection_box = {
+		type = "fixed",
+		fixed = { -0.15, -0.5, -0.15, 0.15, 0.2, 0.15 },
+	},
+})
+
+minetest.register_node("lottplants:dandelion_yellow", {
+	description = "Yellow Dandelion",
+	drawtype = "plantlike",
+	tiles = { "lottplants_dandelion_yellow.png" },
+	inventory_image = "lottplants_dandelion_yellow.png",
+	wield_image = "lottplants_dandelion_yellow.png",
+	sunlight_propagates = true,
+	paramtype = "light",
+	walkable = false,
+	buildable_to = true,
+    drop = {
+		max_items = 2,
+		items = {
+			{ items = {'lottplants:dandelion_yellow'} },
+			{ items = {'lottplants:honey'}, rarity = 20},
+		}
+	},
+	groups = {snappy=3,flammable=2,flower=1,flora=1,attached_node=1,color_yellow=1},
+	sounds = default.node_sound_leaves_defaults(),
+	selection_box = {
+		type = "fixed",
+		fixed = { -0.15, -0.5, -0.15, 0.15, 0.2, 0.15 },
+	},
+})
+
+minetest.register_node("lottplants:geranium", {
+	description = "Blue Geranium",
+	drawtype = "plantlike",
+	tiles = { "lottplants_geranium.png" },
+	inventory_image = "lottplants_geranium.png",
+	wield_image = "lottplants_geranium.png",
+	sunlight_propagates = true,
+	paramtype = "light",
+	walkable = false,
+	buildable_to = true,
+    drop = {
+		max_items = 2,
+		items = {
+			{ items = {'lottplants:geranium'} },
+			{ items = {'lottplants:honey'}, rarity = 20},
+		}
+	},
+	groups = {snappy=3,flammable=2,flower=1,flora=1,attached_node=1,color_blue=1},
+	sounds = default.node_sound_leaves_defaults(),
+	selection_box = {
+		type = "fixed",
+		fixed = { -0.15, -0.5, -0.15, 0.15, 0.2, 0.15 },
+	},
+})
+
+minetest.register_node("lottplants:rose", {
+	description = "Rose",
+	drawtype = "plantlike",
+	tiles = { "lottplants_rose.png" },
+	inventory_image = "lottplants_rose.png",
+	wield_image = "lottplants_rose.png",
+	sunlight_propagates = true,
+	paramtype = "light",
+	walkable = false,
+	buildable_to = true,
+    drop = {
+		max_items = 2,
+		items = {
+			{ items = {'lottplants:rose'} },
+			{ items = {'lottplants:honey'}, rarity = 20},
+		}
+	},
+	groups = {snappy=3,flammable=2,flower=1,flora=1,attached_node=1,color_red=1},
+	sounds = default.node_sound_leaves_defaults(),
+	selection_box = {
+		type = "fixed",
+		fixed = { -0.15, -0.5, -0.15, 0.15, 0.2, 0.15 },
+	},
+})
+
+minetest.register_node("lottplants:tulip", {
+	description = "Tulip",
+	drawtype = "plantlike",
+	tiles = { "lottplants_tulip.png" },
+	inventory_image = "lottplants_tulip.png",
+	wield_image = "lottplants_tulip.png",
+	sunlight_propagates = true,
+	paramtype = "light",
+	walkable = false,
+	buildable_to = true,
+    drop = {
+		max_items = 2,
+		items = {
+			{ items = {'lottplants:tulip'} },
+			{ items = {'lottplants:honey'}, rarity = 20},
+		}
+	},
+	groups = {snappy=3,flammable=2,flower=1,flora=1,attached_node=1,color_orange=1},
+	sounds = default.node_sound_leaves_defaults(),
+	selection_box = {
+		type = "fixed",
+		fixed = { -0.15, -0.5, -0.15, 0.15, 0.2, 0.15 },
+	},
+})
+
+minetest.register_node("lottplants:viola", {
+	description = "Viola",
+	drawtype = "plantlike",
+	tiles = { "lottplants_viola.png" },
+	inventory_image = "lottplants_viola.png",
+	wield_image = "lottplants_viola.png",
+	sunlight_propagates = true,
+	paramtype = "light",
+	walkable = false,
+	buildable_to = true,
+    drop = {
+		max_items = 2,
+		items = {
+			{ items = {'lottplants:viola'} },
+			{ items = {'lottplants:honey'}, rarity = 20},
+		}
+	},
+	groups = {snappy=3,flammable=2,flower=1,flora=1,attached_node=1,color_violet=1},
+	sounds = default.node_sound_leaves_defaults(),
+	selection_box = {
+		type = "fixed",
+		fixed = { -0.15, -0.5, -0.15, 0.15, 0.2, 0.15 },
+	},
+})

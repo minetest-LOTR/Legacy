@@ -31,7 +31,7 @@ local green2 = green
 local mods = {
     "boats", "bones", "bucket", "creative",
     "darkage", "default", "doors", "dye", "farming",
-    "fire", "flowers", "lottarmor", "lottblocks",
+    "fire", "lottarmor", "lottblocks",
     "lottclasses", "lottclothes", "lottfarming",
     "lottinventory", "lottmapgen", "lottmobs",
     "lottores", "lottother", "lottplants",
