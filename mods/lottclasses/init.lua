@@ -177,35 +177,6 @@ local function biome_allowed(biome_id, allowed)
     return false
 end
 
-local function find_surface_y(x, z, min_y, max_y)
-    for y = max_y, min_y, -1 do
-        local node = minetest.get_node_or_nil({
-            x = x,
-            y = y,
-            z = z
-        })
-
-        local above = minetest.get_node_or_nil({
-            x = x,
-            y = y + 1,
-            z = z
-        })
-
-        if node and above then
-            local def = minetest.registered_nodes[node.name]
-
-            if def
-            and def.walkable
-            and above.name == "air" then
-                return y
-            end
-        end
-    end
-
-    return nil
-end
-
-
 local function set_spawn_location(player, race)
     if not lottmapgen then
         minetest.log(
@@ -246,66 +217,21 @@ local function set_spawn_location(player, race)
 
             if biome_allowed(actual_biome, allowed_biomes) then
                 local approx_y =
-                    math.floor(lottmapgen.get_height(wx, wz))
+                    math.floor(lottmapgen.get_terrain_height(wx, wz))
+                
+				player:set_pos({
+					x = wx,
+					y = approx_y + 1,
+					z = wz
+				})
 
-                local min_y = approx_y - 256
-                local max_y = approx_y + 256
-
-                minetest.log(
-                    "warning",
-                    "[lottclasses] emerging spawn area at "
-                    .. wx .. ", " .. wz
-                )
-
-                minetest.emerge_area(
-                    {
-                        x = wx - 16,
-                        y = min_y,
-                        z = wz - 16
-                    },
-                    {
-                        x = wx + 16,
-                        y = max_y,
-                        z = wz + 16
-                    },
-
-                    function(blockpos, action, calls_remaining)
-
-                        if calls_remaining ~= 0 then
-                            return
-                        end
-
-                        local surface_y =
-                            find_surface_y(
-                                wx,
-                                wz,
-                                min_y,
-                                max_y
-                            )
-
-                        if not surface_y then
-                            minetest.log(
-                                "error",
-                                "[lottclasses] failed to find surface after emerge"
-                            )
-                            return
-                        end
-
-                        player:set_pos({
-                            x = wx,
-                            y = surface_y + 1,
-                            z = wz
-                        })
-
-                        minetest.log(
-                            "warning",
-                            "[lottclasses] spawn success at "
-                            .. wx .. ", "
-                            .. surface_y .. ", "
-                            .. wz
-                        )
-                    end
-                )
+				minetest.log(
+					"warning",
+					"[lottclasses] spawn success at "
+					.. wx .. ", "
+					.. approx_y + 1 .. ", "
+					.. wz
+				)
 
                 return true
             end

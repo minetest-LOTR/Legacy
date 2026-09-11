@@ -3,7 +3,7 @@ Authors of source code:
 (LOTT-specific-mod)
 Original Author(s):
 	Amaz (LGPL v2.1)
-	fishyWET (LGPL v2.1)
+	wrynvera (LGPL v2.1)
 
 
 Authors of media files
@@ -11,7 +11,7 @@ Authors of media files
 cd2 (cdqwertz) (CC BY-SA 3.0)
   lottother_chisel.png
 
-fishyWET (CC BY-SA 3.0)
+wrynvera (CC BY-SA 3.0)
 	lottother_blue_flame*.png
 
 the_raven_262 (CC BY-SA 3.0)
