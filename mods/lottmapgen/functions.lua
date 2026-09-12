@@ -132,7 +132,7 @@ function lottmapgen_farmingrareplants(data, vi, p2data)
 	if rand == 1 then
 		data[vi] = c_rplant1
 		p2data[vi] = 2
-     else
+	 else
 		data[vi] = c_rplant2
 	end
 end
@@ -468,14 +468,14 @@ function lottmapgen_jungletree2(x, y, z, area, data)
 				end
 			end
 			end
-      for i = -1, 1 do
+	  for i = -1, 1 do
 			for k = -1, 1 do
-          if math.abs(i) + math.abs(k) == 2 then
-            local vit = area:index(x + i, y + j, z + k)
-            data[vit] = c_tree
-          end
-      end
-      end
+		  if math.abs(i) + math.abs(k) == 2 then
+			local vit = area:index(x + i, y + j, z + k)
+			data[vit] = c_tree
+		  end
+	  end
+	  end
 		elseif j == 7 then
 			for i = -2, 2, 4 do
 			for k = -2, 2, 4 do
@@ -712,7 +712,7 @@ function lottmapgen_beechtree(x, y, z, area, data)
 		if math.random() > (absi + absk) / 24 then
 			data[area:index(x+i, y+j+7, z+k)] = c_beechleaf
 			data[area:index(x+i, y+j+4, z+k)] = c_beechleaf
-		    data[area:index(x+i+2, y+j+4, z+k)] = c_beechleaf
+			data[area:index(x+i+2, y+j+4, z+k)] = c_beechleaf
 			data[area:index(x+i-2, y+j+4, z+k)] = c_beechleaf
 			data[area:index(x+i, y+j+4, z+k+2)] = c_beechleaf
 			data[area:index(x+i, y+j+4, z+k-2)] = c_beechleaf

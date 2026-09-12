@@ -42,30 +42,30 @@ local water_data = lottmapgen.load_compressed(modpath .. "/mapdata/wmask.bin.zli
 local mountain_data = lottmapgen.load_compressed(modpath .. "/mapdata/mmask.bin.zlib")
 
 function lottmapgen.get_height(px, pz)
-    return lottmapgen.sample_bilinear(
-        height_data,
-        px,
-        pz,
-        0
-    )
+	return lottmapgen.sample_bilinear(
+		height_data,
+		px,
+		pz,
+		0
+	)
 end
 
 function lottmapgen.get_water(px, pz)
-    return lottmapgen.sample_bilinear(
-        water_data,
-        px,
-        pz,
-        255
-    )
+	return lottmapgen.sample_bilinear(
+		water_data,
+		px,
+		pz,
+		255
+	)
 end
 
 function lottmapgen.get_mask(px, pz)
-    return lottmapgen.sample_bilinear(
-        mountain_data,
-        px,
-        pz,
-        0
-    )
+	return lottmapgen.sample_bilinear(
+		mountain_data,
+		px,
+		pz,
+		0
+	)
 end
 
 -- TERRAIN NOISES
@@ -84,145 +84,145 @@ dofile(minetest.get_modpath("lottmapgen").."/biomes.lua")
 -- =========================
 core.register_on_generated(function(minp, maxp)
 
-    -- =========================
-    -- CREATE NOISE
-    -- =========================
-    if not lottmapgen.warp_x_noise then
+	-- =========================
+	-- CREATE NOISE
+	-- =========================
+	if not lottmapgen.warp_x_noise then
 
-        lottmapgen.ridge_noise =
-            core.get_value_noise({
-                offset = 0,
-                scale = 1,
+		lottmapgen.ridge_noise =
+			core.get_value_noise({
+				offset = 0,
+				scale = 1,
 
-                spread = {
-                    x = 280,
-                    y = 160,
-                    z = 280
-                },
+				spread = {
+					x = 280,
+					y = 160,
+					z = 280
+				},
 
-                seed = 3003,
-                octaves = 5,
-                persist = 0.55,
-                lacunarity = 2.0
-            })
+				seed = 3003,
+				octaves = 5,
+				persist = 0.55,
+				lacunarity = 2.0
+			})
 
-        lottmapgen.detail_noise =
-            core.get_value_noise({
-                offset = 0,
-                scale = 1,
+		lottmapgen.detail_noise =
+			core.get_value_noise({
+				offset = 0,
+				scale = 1,
 
-                spread = {
-                    x = 40,
-                    y = 40,
-                    z = 40
-                },
+				spread = {
+					x = 40,
+					y = 40,
+					z = 40
+				},
 
-                seed = 4004,
-                octaves = 4,
-                persist = 0.5,
-                lacunarity = 2.0
-            })
+				seed = 4004,
+				octaves = 4,
+				persist = 0.5,
+				lacunarity = 2.0
+			})
 
-        lottmapgen.warp_x_noise =
-            core.get_value_noise({
-                offset = 0,
-                scale = 1,
+		lottmapgen.warp_x_noise =
+			core.get_value_noise({
+				offset = 0,
+				scale = 1,
 
-                spread = {
-                    x = 200,
-                    y = 200,
-                    z = 200
-                },
+				spread = {
+					x = 200,
+					y = 200,
+					z = 200
+				},
 
-                seed = 5005,
-                octaves = 3,
-                persist = 0.5,
-                lacunarity = 2.0
-            })
+				seed = 5005,
+				octaves = 3,
+				persist = 0.5,
+				lacunarity = 2.0
+			})
 
-        lottmapgen.warp_z_noise =
-            core.get_value_noise({
-                offset = 0,
-                scale = 1,
+		lottmapgen.warp_z_noise =
+			core.get_value_noise({
+				offset = 0,
+				scale = 1,
 
-                spread = {
-                    x = 200,
-                    y = 200,
-                    z = 200
-                },
+				spread = {
+					x = 200,
+					y = 200,
+					z = 200
+				},
 
-                seed = 6006,
-                octaves = 3,
-                persist = 0.5,
-                lacunarity = 2.0
-            })
+				seed = 6006,
+				octaves = 3,
+				persist = 0.5,
+				lacunarity = 2.0
+			})
 
-        lottmapgen.mountain_shape_noise =
-            core.get_value_noise({
-                offset = 0,
-                scale = 1,
+		lottmapgen.mountain_shape_noise =
+			core.get_value_noise({
+				offset = 0,
+				scale = 1,
 
-                spread = {
-                    x = 600,
-                    y = 600,
-                    z = 600
-                },
+				spread = {
+					x = 600,
+					y = 600,
+					z = 600
+				},
 
-                seed = 7007,
-                octaves = 3,
-                persist = 0.5,
-                lacunarity = 2.0
-            })
+				seed = 7007,
+				octaves = 3,
+				persist = 0.5,
+				lacunarity = 2.0
+			})
 
-        lottmapgen.mountain_breakup_noise =
-            core.get_value_noise({
-                offset = 0,
-                scale = 1,
+		lottmapgen.mountain_breakup_noise =
+			core.get_value_noise({
+				offset = 0,
+				scale = 1,
 
-                spread = {
-                    x = 900,
-                    y = 900,
-                    z = 900
-                },
+				spread = {
+					x = 900,
+					y = 900,
+					z = 900
+				},
 
-                seed = 8123,
-                octaves = 2,
-                persist = 0.5,
-                lacunarity = 2.0
-            })
+				seed = 8123,
+				octaves = 2,
+				persist = 0.5,
+				lacunarity = 2.0
+			})
 
-        lottmapgen.secondary_ridge_noise =
-            core.get_value_noise({
-                offset = 0,
-                scale = 1,
+		lottmapgen.secondary_ridge_noise =
+			core.get_value_noise({
+				offset = 0,
+				scale = 1,
 
-                spread = {
-                    x = 120,
-                    y = 120,
-                    z = 120
-                },
+				spread = {
+					x = 120,
+					y = 120,
+					z = 120
+				},
 
-                seed = 9341,
-                octaves = 3,
-                persist = 0.45,
-                lacunarity = 2.1
-            })
-    end
+				seed = 9341,
+				octaves = 3,
+				persist = 0.45,
+				lacunarity = 2.1
+			})
+	end
 
-    -- =========================
-    -- VOXELMANIP
-    -- =========================
-    local vm, emin, emax =
-        core.get_mapgen_object(
-            "voxelmanip"
-        )
-    local data = vm:get_data()
-    local p2data = vm:get_param2_data()
-    local area =
-        VoxelArea:new({
-            MinEdge = emin,
-            MaxEdge = emax
-        })
+	-- =========================
+	-- VOXELMANIP
+	-- =========================
+	local vm, emin, emax =
+		core.get_mapgen_object(
+			"voxelmanip"
+		)
+	local data = vm:get_data()
+	local p2data = vm:get_param2_data()
+	local area =
+		VoxelArea:new({
+			MinEdge = emin,
+			MaxEdge = emax
+		})
 
 	-- =========================
 	-- TERRAIN PASS
@@ -272,14 +272,14 @@ core.register_on_generated(function(minp, maxp)
 		end
 	end
 
-    -- =========================
-    -- DECORATION PASS
-    -- =========================
-    --
-    -- happen AFTER terrain.
-    -- to prevent columns to erase parts
-    -- of trees that extend horizontally.
-    --
+	-- =========================
+	-- DECORATION PASS
+	-- =========================
+	--
+	-- happen AFTER terrain.
+	-- to prevent columns to erase parts
+	-- of trees that extend horizontally.
+	--
 	-- Decoration ORIGINS belong to this chunk.
 	-- The decoration itself may write into the
 	-- VoxelManip overgeneration area.
@@ -366,35 +366,35 @@ core.register_on_generated(function(minp, maxp)
 		end
 	end
 
-    -- =========================
-    -- WRITE
-    -- =========================
-    vm:set_data(data)
-    vm:set_param2_data(p2data)
+	-- =========================
+	-- WRITE
+	-- =========================
+	vm:set_data(data)
+	vm:set_param2_data(p2data)
 
-    vm:set_lighting({day=0, night=0})
-    vm:calc_lighting()
-    vm:update_liquids()
-    vm:write_to_map()
+	vm:set_lighting({day=0, night=0})
+	vm:calc_lighting()
+	vm:update_liquids()
+	vm:write_to_map()
 end)
 
 -- TEMPORARY -- TO MOVE TO SOMEWHERE MORE SUITABLE LATER
 minetest.register_on_joinplayer(function(player)
-    -- hide clouds
-    player:set_clouds({
-        density = 0
-    })
+	-- hide clouds
+	player:set_clouds({
+		density = 0
+	})
 
-    -- shaders
-    player:set_lighting({
-        saturation = 1.0,
+	-- shaders
+	player:set_lighting({
+		saturation = 1.0,
 
-        shadows = {
-            intensity = 0.4
-        },
+		shadows = {
+			intensity = 0.4
+		},
 
-        volumetric_light = {
-            strength = 0.2
-        }
-    })
+		volumetric_light = {
+			strength = 0.2
+		}
+	})
 end)

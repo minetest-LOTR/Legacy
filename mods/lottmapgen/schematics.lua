@@ -283,7 +283,7 @@ end
 function lottmapgen.enqueue_fill(fill)
 	local first = lottmapgen.queue.first - 1
 	lottmapgen.queue.first = first
-    lottmapgen.queue[first] = {fill=fill}
+	lottmapgen.queue[first] = {fill=fill}
 end
 
 
@@ -343,8 +343,8 @@ function lottmapgen.place_building(building, pos)
 	local pos2 = {x = pos.x + building.bbox.xmax, y = pos.y + building.bbox.ymax, z = pos.z + building.bbox.zmax}
 	local count = worldedit2.deserialize(p, value)
 	if areas_mod ~= nil and protect_houses == true then
-                areas:add(building.area_owner, building.area_name, pos1, pos2, nil)
-                areas:save()
+		areas:add(building.area_owner, building.area_name, pos1, pos2, nil)
+		areas:save()
 	end
 
 	lottmapgen.enqueue_fill({xmin = pos1.x, zmin = pos1.z, xmax = pos2.x, zmax = pos2.z, y = pos1.y})
@@ -388,8 +388,6 @@ end)
 -- fill of the botom nodes to avoid empty space.
 
 lottmapgen.fill_bellow = function(fill)
-
-
 	local pos1 = {x = fill.xmin, y = fill.y-fill_below_count, z = fill.zmin}
 	local pos2 = {x = fill.xmax, y = fill.y,                  z = fill.zmax}
 
@@ -452,31 +450,31 @@ end
 
 -- folowing function let as a way to "hack" building placement, but shouldn't be needed
 for builddesc, v in pairs(lottmapgen_list) do
-    local build = v.build
-    minetest.register_node("lottmapgen:"..build, {
-        description = builddesc,
-        drawtype = "glasslike",
-        walkable = false,
-        tiles = {"lottother_air.png"},
-        pointable = false,
-        sunlight_propagates = true,
-        is_ground_content = true,
-        groups = {not_in_creative_inventory = 1},
-        on_place = function(itemstack, placer, pointed_thing)
-            if pointed_thing.above then
-                local file = io.open(minetest.get_modpath("lottmapgen").."/schems/"..build..".we")
-                local value = file:read("*a")
-                file:close()
+	local build = v.build
+	minetest.register_node("lottmapgen:"..build, {
+		description = builddesc,
+		drawtype = "glasslike",
+		walkable = false,
+		tiles = {"lottother_air.png"},
+		pointable = false,
+		sunlight_propagates = true,
+		is_ground_content = true,
+		groups = {not_in_creative_inventory = 1},
+		on_place = function(itemstack, placer, pointed_thing)
+			if pointed_thing.above then
+				local file = io.open(minetest.get_modpath("lottmapgen").."/schems/"..build..".we")
+				local value = file:read("*a")
+				file:close()
 		local p = pointed_thing.above
 		p.x = p.x-v.center.x
 		p.y = p.y-v.center.y
 		p.z = p.z-v.center.z
-                local count = worldedit2.deserialize(p, value)
-                itemstack:take_item()
-            end
-            return itemstack
-        end,
-    })
+				local count = worldedit2.deserialize(p, value)
+				itemstack:take_item()
+			end
+			return itemstack
+		end,
+	})
 end
 
 

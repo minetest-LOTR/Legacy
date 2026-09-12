@@ -18,7 +18,7 @@ minetest.register_node("lottmapgen:angsnowblock", {
 	description = "Snow Block",
 	tiles = {"default_snow.png"},
 	is_ground_content = true,
-     drop = 'default:snowblock',
+	 drop = 'default:snowblock',
 	freezemelt = "default:water_source",
 	groups = {crumbly=3, melts=1},
 	sounds = default.node_sound_dirt_defaults({
@@ -49,7 +49,7 @@ minetest.register_node(":default:ice", {
 	drawtype = "glasslike",
 	tiles = {"lottmapgen_ice.png"},
 	is_ground_content = true,
-    use_texture_alpha = "blend",
+	use_texture_alpha = "blend",
 	paramtype = "light",
 	freezemelt = "default:water_source",
 	groups = {cracky=3, melts=1},

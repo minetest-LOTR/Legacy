@@ -472,7 +472,7 @@ minetest.register_abm({
 			[26] = "bones:bones",
 			[27] = "lottfarming:orc_food 4",
 			[28] = "lottfarming:orc_medicine 2",
-			[28] = "lottblocks:deep_depths"
+			[29] = "lottblocks:deep_depths"
 		}
 		local meta = minetest.get_meta(pos)
 		local inv = meta:get_inventory()
@@ -584,11 +584,17 @@ minetest.register_abm({
 			[24] = "lottother:ring_furnace_inactive",
 			[25] = "lottother:ringsilver_furnace_inactive",
 			[26] = "lottfarming:corn " .. r(2, 10),
-			[27] = "lottblocks:ring_guide_2"
 		}
 		local meta = minetest.get_meta(pos)
 		local inv = meta:get_inventory()
-		inv:set_stack("main", 1, "lottblocks:ring_guide")
+
+		-- 1/10 chance for ring guide 2, otherwise ring guide 1
+		if r(1, 10) == 1 then
+			inv:set_stack("main", 1, "lottblocks:ring_guide_2")
+		else
+			inv:set_stack("main", 1, "lottblocks:ring_guide")
+		end
+
 		for i = 0, item_count do
 			local stack = r(0, 36)
 			local item = items_available[r(0, 36)]
@@ -599,7 +605,7 @@ minetest.register_abm({
 				inv:set_stack("main", stack, item)
 			end
 		end
-    end,
+	end,
 })
 
 minetest.register_abm({
