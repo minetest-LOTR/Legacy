@@ -70,6 +70,7 @@ end
 
 -- TERRAIN NOISES
 dofile(minetest.get_modpath("lottmapgen").."/noise.lua")
+dofile(minetest.get_modpath("lottmapgen").."/cavenoise.lua")
 
 -- BIOME HANDLING
 dofile(minetest.get_modpath("lottmapgen").."/biome_helpers.lua")
@@ -273,43 +274,89 @@ core.register_on_generated(function(minp, maxp)
 	end
 
 	-- =========================
+	-- CAVE PASS
+	-- =========================
+	--
+	-- IMPORTANT:
+	-- Cave ownership must cover the same
+	-- vertical range that terrain writes.
+	--
+	-- Otherwise the terrain overgeneration
+	-- can place stone back through caves at
+	-- vertical mapchunk boundaries.
+	local cave_minp = {
+		x = minp.x,
+		y = terrain_min_y,
+		z = minp.z
+	}
+
+	local cave_maxp = {
+		x = maxp.x,
+		y = terrain_max_y,
+		z = maxp.z
+	}
+
+	lottmapgen.generate_caves(
+		cave_minp,
+		cave_maxp,
+		area,
+		data
+	)
+
+	-- =========================
 	-- DECORATION PASS
 	-- =========================
 	--
-	-- happen AFTER terrain.
-	-- to prevent columns to erase parts
-	-- of trees that extend horizontally.
+	-- happen AFTER terrain + caves.
 	--
 	-- Decoration ORIGINS belong to this chunk.
 	-- The decoration itself may write into the
 	-- VoxelManip overgeneration area.
-
+	
 	for z = minp.z, maxp.z do
 		for x = minp.x, maxp.x do
-			local biome_id =
-				lottmapgen.get_blended_biome_id(x, z)
-
+			local biome_id = lottmapgen.get_blended_biome_id(x, z)
+	
 			if biome_id >= 100 then
 				local ground_y = lottmapgen.get_terrain_height(x, z)
-
-				-- IN-CHUNK GENERATION
-				--
-				-- Only this chunk is responsible
-				-- for starting decorations whose
-				-- surface belongs to this chunk.
+	
 				if ground_y >= lottmapgen.WATER_LEVEL
 				and ground_y >= minp.y
 				and ground_y <= maxp.y then
-
-					lottmapgen.decorate_surface(
-						biome_id,
+	
+					local surface_vi = area:index(
 						x,
 						ground_y,
-						z,
-						area,
-						data,
-						p2data
+						z
 					)
+	
+					local above_vi = area:index(
+						x,
+						ground_y + 1,
+						z
+					)
+	
+					local surface_node = data[surface_vi]
+					local above_node = data[above_vi]
+	
+					-- Only decorate if the original terrain
+					-- surface still exists after cave carving.
+					--
+					-- This prevents decorations from appearing
+					-- inside cave mouths or on carved-away surface.
+					if surface_node ~= c_air
+					and above_node == c_air then
+	
+						lottmapgen.decorate_surface(
+							biome_id,
+							x,
+							ground_y,
+							z,
+							area,
+							data,
+							p2data
+						)
+					end
 				end
 			end
 		end
