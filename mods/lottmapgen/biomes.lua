@@ -116,7 +116,13 @@ lottmapgen.biome.register({
         elseif math.random(PLANT6) == 2 then
             data[vi] = c_seregon
             p2data[vi] = 40
-        end
+
+		elseif math.random(PLANT14) == 13 then
+			lottmapgen.enqueue_building(
+				"Angmar Fort",
+				{x = x, y = y, z = z}
+			)
+		end
     end
 })
 
@@ -229,6 +235,12 @@ lottmapgen.biome.register({
 
         elseif math.random(PLANT9) == 8 then
             data[vi] = c_melon
+
+		elseif math.random(PLANT14) == 13 then
+            lottmapgen.enqueue_building(
+                "Hobbit Hole",
+                {x = x, y = y, z = z}
+            )
         end
     end
 })
@@ -255,6 +267,12 @@ lottmapgen.biome.register({
             lottmapgen_jungletree2(
                 x, y, z,
                 area, data
+            )
+
+		elseif math.random(PLANT14) == 13 then
+            lottmapgen.enqueue_building(
+                "Mirkwood House",
+                {x = x, y = y, z = z}
             )
         end
     end
@@ -370,6 +388,19 @@ lottmapgen.biome.register({
                 vi,
                 p2data
             )
+
+		elseif math.random(PLANT13) == 13 then
+            if math.random(1, 2) == 1 then
+                lottmapgen.enqueue_building(
+                    "Mallorn House",
+                    {x = x, y = y, z = z}
+                )
+            else
+                lottmapgen.enqueue_building(
+                    "Lorien House",
+                    {x = x, y = y, z = z}
+                )
+            end
         end
     end
 })
@@ -537,6 +568,12 @@ lottmapgen.biome.register({
         elseif math.random(PLANT6) == 2 then
             data[vi] = c_pilinehtar
             p2data[vi] = 2
+
+		elseif math.random(PLANT14) == 13 then
+            lottmapgen.enqueue_building(
+                "Rohan Fort",
+                {x = x, y = y, z = z}
+            )
         end
     end
 })
@@ -613,6 +650,12 @@ lottmapgen.biome.register({
         elseif math.random(PLANT6) == 2 then
             data[vi] = c_mallos
             p2data[vi] = 42
+
+		elseif math.random(PLANT14) == 13 then
+            lottmapgen.enqueue_building(
+                "Gondor Fort",
+                {x = x, y = y, z = z}
+            )
         end
     end
 })
@@ -706,6 +749,12 @@ lottmapgen.biome.register({
         elseif math.random(PLANT4) == 2 then
             data[vi] = c_bomordor
             p2data[vi] = 42
+
+		elseif math.random(PLANT14) == 13 then
+            lottmapgen.enqueue_building(
+                "Orc Fort",
+                {x = x, y = y, z = z}
+            )
         end
     end
 })

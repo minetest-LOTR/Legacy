@@ -1,4 +1,6 @@
 
+dofile(minetest.get_modpath("lottmapgen").."/chests.lua")
+
 local areas_mod = minetest.get_modpath("areas")
 local protect_houses = minetest.settings:get_bool("protect_structures") or false
 
