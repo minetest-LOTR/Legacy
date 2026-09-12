@@ -46,7 +46,7 @@ local race_chooser = "size[8,6]"..
 	"image[0.25,3.4;0.75,0.75;hobbit.png]"..
 	"button_exit[1,3.5;2,0.5;hobbit;Hobbit]"..
 	"dropdown[5.5,3.4;2;gender;Male,Female;1]"
-	
+
 local fly_stuff = "button[1,4.75;2,0.5;fast;Fast]" ..
 	"button[3,4.75;2,0.5;fly;Fly]" ..
 	"button[5,4.75;2,0.5;noclip;Noclip]" ..

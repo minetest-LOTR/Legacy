@@ -35,13 +35,6 @@ function lottmapgen.decorate_surface(
         return
     end
 
-    if x <= area.MinEdge.x + 2
-    or x >= area.MaxEdge.x - 2
-    or z <= area.MinEdge.z + 2
-    or z >= area.MaxEdge.z - 2 then
-        return
-    end
-
     local vi = area:index(x, y, z)
 
     if data[vi] ~= c_air then

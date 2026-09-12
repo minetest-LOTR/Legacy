@@ -97,6 +97,11 @@ armor = {
 		.."list[current_player;craftpreview;7,2;1,1;]"
 		.."listring[current_player;main]"
 		.."listring[current_player;craft]"
+		.."listring[current_player;main]"
+		.."listring[detached:player_name_armor;armor]"
+		.."listring[current_player;main]"
+		.."listring[detached:player_name_clothing;clothing]"
+		.."listring[current_player;main]"
 		.."image[7,3;1,1;lottarmor_trash.png]"
 		.."list[detached:armor_trash;main;7,3;1,1;]"
 		.."image_button[7,1;1,1;bags.png;bags;]",
