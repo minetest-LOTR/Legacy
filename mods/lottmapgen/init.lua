@@ -234,7 +234,7 @@ core.register_on_generated(function(minp, maxp)
 		emin.y
 	)
 	local terrain_max_y = math.min(
-		maxp.y + 1,
+		maxp.y + 2,
 		emax.y
 	)
 

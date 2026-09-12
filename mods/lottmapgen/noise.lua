@@ -6,9 +6,6 @@ lottmapgen.warp_z_noise = nil
 lottmapgen.mountain_shape_noise = nil
 lottmapgen.mountain_breakup_noise = nil
 lottmapgen.secondary_ridge_noise = nil
-
-local modpath = core.get_modpath(core.get_current_modname())
-
 -- =========================
 -- TERRAIN HEIGHT
 -- =========================

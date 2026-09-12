@@ -588,8 +588,8 @@ minetest.register_abm({
 		local meta = minetest.get_meta(pos)
 		local inv = meta:get_inventory()
 
-		-- 1/10 chance for ring guide 2, otherwise ring guide 1
-		if r(1, 10) == 1 then
+		-- 1/5 chance for ring guide 2, otherwise ring guide 1
+		if r(1, 5) == 1 then
 			inv:set_stack("main", 1, "lottblocks:ring_guide_2")
 		else
 			inv:set_stack("main", 1, "lottblocks:ring_guide")
