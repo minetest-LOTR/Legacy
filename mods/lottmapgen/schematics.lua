@@ -28,7 +28,6 @@ local lottmapgen_list = {
 		center = {x=13, y=3, z=24} },
 	["Dwarf House"] =    {build="dwarfhouse",   area_owner = "Dwarf Smith",   area_name = "Dwarf House",
 		center = {x=16, y=1, z=3} },
-
 }
 
 -- load bounding box from files

@@ -315,6 +315,57 @@ core.register_on_generated(function(minp, maxp)
 		end
 	end
 
+	-- =========================
+	-- UNDERGROUND STRUCTURE PASS
+	-- =========================
+
+	for z = minp.z, maxp.z do
+		for x = minp.x, maxp.x do
+
+			local biome_id = lottmapgen.get_blended_biome_id(x, z)
+
+			if biome_id == 107 and math.random(50000) == 1 then
+
+				local ground_y = lottmapgen.get_terrain_height(x, z)
+				local y = ground_y - math.random(5, 40)
+
+				if y >= minp.y
+				and y <= maxp.y then
+
+					lottmapgen.enqueue_building(
+						"Dwarf House",
+						{
+							x = x,
+							y = y,
+							z = z
+						}
+					)
+				end
+
+			elseif biome_id == 106 then
+				local ground_y = lottmapgen.get_terrain_height(x, z)
+
+				local min_y =
+					math.max(
+						minp.y,
+						ground_y - 100
+					)
+
+				local max_y =
+					math.min(
+						maxp.y,
+						ground_y - 50
+					)
+
+				if min_y <= max_y and math.random(10000) == 1 then
+
+					local y = math.random(min_y, max_y)
+					lottmapgen_elf_workshop(x, y, z, area, data, p2data)
+				end
+			end
+		end
+	end
+
     -- =========================
     -- WRITE
     -- =========================
