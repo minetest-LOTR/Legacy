@@ -389,7 +389,7 @@ lottmapgen.biome.register({
                 p2data
             )
 
-		elseif math.random(PLANT13) == 13 then
+		elseif math.random(PLANT8) == 13 then
             if math.random(1, 2) == 1 then
                 lottmapgen.enqueue_building(
                     "Mallorn House",

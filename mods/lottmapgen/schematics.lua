@@ -43,6 +43,7 @@ end
 
 -- queue to store the buildings which are waiting to be built (queue structure from https://www.lua.org/pil/11.4.html)
 lottmapgen.queue = {first = 0, last = -1}
+lottmapgen.emerging_buildings = {}
 
 local file = io.open(minetest.get_worldpath().."/"..SAVEDIR.."/building_queue", "r")
 if file then
@@ -58,10 +59,224 @@ minetest.register_on_shutdown(function()
 	end
 end)
 
+local function get_building_id(name, pos)
+	return string.format(
+		"%s:%d:%d:%d",
+		name,
+		pos.x,
+		pos.y,
+		pos.z
+	)
+end
+
+local function get_building_bounds(building, pos)
+	return {
+		x = pos.x + building.bbox.xmin,
+		y = pos.y + building.bbox.ymin,
+		z = pos.z + building.bbox.zmin
+	},
+	{
+		x = pos.x + building.bbox.xmax,
+		y = pos.y + building.bbox.ymax,
+		z = pos.z + building.bbox.zmax
+	}
+end
+
+-- handle building bounds to prevent collision!
+local structure_padding = 8
+
+lottmapgen.reserved_buildings =
+	lottmapgen.reserved_buildings or {}
+
+local function boxes_overlap(a1, a2, b1, b2)
+	return not (
+		a2.x < b1.x
+		or a1.x > b2.x
+		or a2.y < b1.y
+		or a1.y > b2.y
+		or a2.z < b1.z
+		or a1.z > b2.z
+	)
+end
+
+local function get_padded_building_bounds(building, pos)
+	local pos1, pos2 =
+		get_building_bounds(
+			building,
+			pos
+		)
+
+	return {
+		x = pos1.x - structure_padding,
+		y = pos1.y - structure_padding,
+		z = pos1.z - structure_padding
+	},
+	{
+		x = pos2.x + structure_padding,
+		y = pos2.y + structure_padding,
+		z = pos2.z + structure_padding
+	}
+end
+
+local function building_position_free(building, pos)
+
+	local pos1, pos2 =
+		get_padded_building_bounds(
+			building,
+			pos
+		)
+
+	for _, reserved in pairs(
+		lottmapgen.reserved_buildings
+	) do
+
+		if boxes_overlap(
+			pos1,
+			pos2,
+			reserved.pos1,
+			reserved.pos2
+		) then
+			return false
+		end
+	end
+
+	return true
+end
+
+local function reserve_building(name, building, pos)
+
+	local pos1, pos2 =
+		get_padded_building_bounds(
+			building,
+			pos
+		)
+
+	local id =
+		get_building_id(
+			name,
+			pos
+		)
+
+	lottmapgen.reserved_buildings[id] = {
+		pos1 = pos1,
+		pos2 = pos2
+	}
+end
+
 function lottmapgen.enqueue_building(name, pos)
-	local first = lottmapgen.queue.first - 1
+
+	local building =
+		lottmapgen_list[name]
+
+	if not building then
+		minetest.log(
+			"error",
+			"[lottmapgen] Unknown building: "
+			.. tostring(name)
+		)
+
+		return false
+	end
+
+	if not building_position_free(
+		building,
+		pos
+	) then
+		return false
+	end
+
+	-- Reserve immediately so another structure
+	-- cannot be queued into the same area
+	-- before this one has actually been placed.
+	reserve_building(
+		name,
+		building,
+		pos
+	)
+
+	local first =
+		lottmapgen.queue.first - 1
+
 	lottmapgen.queue.first = first
-    lottmapgen.queue[first] = {name = name, pos = pos}
+
+	lottmapgen.queue[first] = {
+		id = get_building_id(
+			name,
+			pos
+		),
+
+		name = name,
+		pos = pos
+	}
+
+	return true
+end
+
+function lottmapgen.emerge_building(queued)
+	local building = lottmapgen_list[queued.name]
+
+	if not building then
+		minetest.log(
+			"error",
+			"[lottmapgen] Unknown building: " .. tostring(queued.name)
+		)
+		return
+	end
+
+	local pos1, pos2 =
+		get_building_bounds(building, queued.pos)
+
+	-- Optional safety margin.
+	-- Helps ensure terrain immediately around the building
+	-- has also completed mapgen.
+	local margin = 16
+
+	pos1 = {
+		x = pos1.x - margin,
+		y = pos1.y - margin,
+		z = pos1.z - margin
+	}
+
+	pos2 = {
+		x = pos2.x + margin,
+		y = pos2.y + margin,
+		z = pos2.z + margin
+	}
+
+	lottmapgen.emerging_buildings[queued.id] = true
+
+	minetest.emerge_area(
+		pos1,
+		pos2,
+
+		function(blockpos, action, calls_remaining, param)
+			if calls_remaining ~= 0 then
+				return
+			end
+
+			local queued = param
+
+			lottmapgen.emerging_buildings[queued.id] = nil
+
+			-- Run placement on the normal server step,
+			-- after emergence/mapgen has completed.
+			minetest.after(0, function()
+				local building =
+					lottmapgen_list[queued.name]
+
+				if not building then
+					return
+				end
+
+				lottmapgen.place_building(
+					building,
+					queued.pos
+				)
+			end)
+		end,
+
+		queued
+	)
 end
 
 -- request to fill some node below buildings
@@ -82,7 +297,7 @@ function lottmapgen.dequeue_building()
 end
 
 -- check if all the blocks that intersect the building are genrated
-function lottmapgen.check_building(bbox, pos)
+local function area_generated(bbox, pos)
 	--mapgen chuncks generate 80 blocks at a time, so we only need to checks the limits of the bounding box and
 	-- each 80 inside nodes
 	for z=bbox.zmin, bbox.zmax+80, 80 do
@@ -101,14 +316,22 @@ function lottmapgen.check_building(bbox, pos)
 	return true
 end
 
-
 function lottmapgen.check_fill(fill)
 	local bbox = {
-		xmin = fill.xmin, ymin = fill.y-fill_below_count, zmin = fill.zmin,
-		xmax = fill.xmax, ymax = fill.y,                  zmax = fill.zmax}
-	return lottmapgen.check_building(bbox, {x=0, y=0, z=0})
-end
+		xmin = fill.xmin,
+		ymin = fill.y - fill_below_count,
+		zmin = fill.zmin,
 
+		xmax = fill.xmax,
+		ymax = fill.y,
+		zmax = fill.zmax
+	}
+
+	return area_generated(
+		bbox,
+		{x=0, y=0, z=0}
+	)
+end
 -- place building using worldedit
 function lottmapgen.place_building(building, pos)
 	--print(building.build.." placed at "..pos.x..' '..pos.y..' '..pos.z)
@@ -142,15 +365,21 @@ minetest.register_globalstep(function(dtime)
 				lottmapgen.fill_bellow(queued.fill)
 			end
 		else
+			-- Compatibility with queues saved before building IDs were added.
+			if not queued.id then
+				queued.id =
+					get_building_id(
+						queued.name,
+						queued.pos
+					)
+			end
 
-			local building = lottmapgen_list[queued.name];
-
-			-- not all the building will be placed, ask to replace it later
-			if not lottmapgen.check_building(building.bbox, queued.pos) then
-				lottmapgen.enqueue_building(queued.name, queued.pos)
-			else
-				-- place the building on generated nodes
-				lottmapgen.place_building(building, queued.pos)
+			if not lottmapgen.emerging_buildings[
+				queued.id
+			] then
+				lottmapgen.emerge_building(
+					queued
+				)
 			end
 		end
 	end
@@ -170,7 +399,6 @@ lottmapgen.fill_bellow = function(fill)
 	replace_node[minetest.get_content_id("lottother:mordor_stone")]=minetest.get_content_id("lottmapgen:mordor_stone")
 
 	local c_air = 	minetest.get_content_id("air")
-	local c_ignore = minetest.get_content_id("ignore")
 	local c_water = minetest.get_content_id("default:water_source")
 	local c_river_water = minetest.get_content_id("default:river_water_source")
 	local c_morwat = minetest.get_content_id("lottmapgen:blacksource")
