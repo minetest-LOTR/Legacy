@@ -7,6 +7,9 @@ Original Author(s):
 	lumidify (LGPL v2.1)
 	fishyWET (LGPL v2.1)
 
+stalagmites.lua
+	Corvus262 (LGPL v2.1)
+
 Authors of media files
 -----------------------
 Flipsels (CC BY-SA 3.0)
@@ -59,6 +62,10 @@ fishyWET (CC BY-SA 3.0)
 	lottblocks_lamp_active*.png
 	lottblocks_lamp_inv*.png
 	
+Corvus262 (CC BY-SA 3.0)
+	lottblocks_stalactite.obj
+	lottblocks_stalagmites*.png
+
 Otherwise: Amaz (CC BY-SA 3.0)
 	
 Regarding Banners:

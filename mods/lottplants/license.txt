@@ -13,7 +13,7 @@ philipbenr (CC BY-SA 3.0)
 	lottplants_mallorn*.png
 	lottplants_birchtree*.png
 
-pithy
+pithy (CC BY-SA 3.0)
 	lottplants_*tree_stair.png (Based on lottplants_*tree.png)
 
 Ironzorg, VanessaE (WTFPL) (from minetest_game 0.4 mod: flowers)
@@ -23,6 +23,11 @@ Ironzorg, VanessaE (WTFPL) (from minetest_game 0.4 mod: flowers)
     lottplants_rose.png
     lottplants_tulip.png
     lottplants_viola.png
+
+Gambit (WTFPL) (from minetest_game mod: flowers)
+	lottplants_mushroom_brown.png
+	lottplants_mushroom_red.png
+	lottplants_mushroom_* (modified)
 
 wrynvera (CC BY-SA 3.0)
 	Everything else

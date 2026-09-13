@@ -739,7 +739,7 @@ function lottmapgen_beechtree(x, y, z, area, data)
 		end
 	end
 	end
-	for j = -3, t do
+	for j = -3, t + 6 do
 		data[area:index(x, y+j, z)] = c_tree
 	end
 end
@@ -747,7 +747,7 @@ end
 function lottmapgen_mirktree(x, y, z, area, data)
 	local c_juntree = minetest.get_content_id("default:jungletree")
 	local c_junleaf = minetest.get_content_id("lottplants:mirkleaf")
-	local top = math.random(6, 8)
+	local top = math.random(6, 12)
 	for j = math.random(-4, -2), top do
 		if j == top or j == top - 1 or j == top + 1 or j == top - 2 then
 			for i = -3, 4 do -- leaves

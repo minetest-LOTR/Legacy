@@ -1,6 +1,7 @@
 dofile(minetest.get_modpath("lottplants").."/nodes.lua")
 dofile(minetest.get_modpath("lottplants").."/wild_food.lua")
 dofile(minetest.get_modpath("lottplants").."/flowers.lua")
+dofile(minetest.get_modpath("lottplants").."/mushrooms.lua")
 dofile(minetest.get_modpath("lottplants").."/functions.lua")
 
 minetest.register_node("lottplants:brambles_of_mordor", {
