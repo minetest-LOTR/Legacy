@@ -8,8 +8,6 @@ local c_water = core.get_content_id("default:water_source")
 local c_stone = core.get_content_id("default:stone")
 local c_morstone = core.get_content_id("lottmapgen:mordor_stone")
 
-local c_mithril_lamp = core.get_content_id("lottblocks:mithril_stonelamp")
-
 
 -- =========================
 -- WORM CAVE SETTINGS
@@ -92,14 +90,6 @@ local WORM_CAVE_SURFACE_MIN_ABOVE_WATER = 3
 
 -- extra horizontal river clearance around cave spheres
 local WORM_CAVE_RIVER_EXTRA_MARGIN = 2
-
-
--- =========================
--- WORM CAVE LIGHTING
--- =========================
-
--- lower values place lamps more frequently
-local WORM_CAVE_LAMP_CHANCE = 100
 
 
 -- =========================
@@ -385,42 +375,6 @@ end
 
 
 -- =========================
--- WORM CAVE LAMP CANDIDATES
--- =========================
-
-local function add_worm_cave_lamp_candidate(
-	x,
-	y,
-	z,
-	area,
-	lamp_candidates,
-	lamp_candidate_lookup
-)
-
-	local hash = get_worm_cave_position_hash(x, y, z)
-
-	if hash % WORM_CAVE_LAMP_CHANCE ~= 0 then
-		return
-	end
-
-	local vi = area:index(x, y, z)
-
-	if lamp_candidate_lookup[vi] then
-		return
-	end
-
-	lamp_candidate_lookup[vi] = true
-
-	lamp_candidates[#lamp_candidates + 1] = {
-		x = x,
-		y = y,
-		z = z,
-		vi = vi
-	}
-end
-
-
--- =========================
 -- WORM CAVE SPHERE CARVING
 -- =========================
 
@@ -434,8 +388,7 @@ local function carve_worm_cave_sphere(
 	maxp,
 	area,
 	data,
-	lamp_candidates,
-	lamp_candidate_lookup
+	cave_data
 )
 
 	if radius <= 0 then
@@ -515,16 +468,15 @@ local function carve_worm_cave_sphere(
 
 								data[vi] = c_air
 
-								if not surface_opening then
-									add_worm_cave_lamp_candidate(
-										x,
-										y,
-										z,
-										area,
-										lamp_candidates,
-										lamp_candidate_lookup
-									)
-								end
+								lottmapgen.mark_cave_node(
+									x,
+									y,
+									z,
+									vi,
+									"worm",
+									cave_data
+								)
+
 							end
 
 						elseif surface_opening
@@ -590,8 +542,7 @@ local function move_worm_cave_down(
 	maxp,
 	area,
 	data,
-	lamp_candidates,
-	lamp_candidate_lookup
+	cave_data
 )
 
 	while y - target_y > WORM_CAVE_MAX_DESCENT_PER_STEP do
@@ -616,8 +567,7 @@ local function move_worm_cave_down(
 				maxp,
 				area,
 				data,
-				lamp_candidates,
-				lamp_candidate_lookup
+				cave_data
 			)
 		end
 	end
@@ -644,8 +594,7 @@ local function generate_worm_cave_path(
 	maxp,
 	area,
 	data,
-	lamp_candidates,
-	lamp_candidate_lookup
+	cave_data
 )
 
 	local x = start_x
@@ -753,8 +702,7 @@ local function generate_worm_cave_path(
 						maxp,
 						area,
 						data,
-						lamp_candidates,
-						lamp_candidate_lookup
+						cave_data
 					)
 				end
 
@@ -797,8 +745,7 @@ local function generate_worm_cave_path(
 					maxp,
 					area,
 					data,
-					lamp_candidates,
-					lamp_candidate_lookup
+					cave_data
 				)
 			end
 		end
@@ -821,84 +768,13 @@ local function generate_worm_cave_path(
 				maxp,
 				area,
 				data,
-				lamp_candidates,
-				lamp_candidate_lookup
+				cave_data
 			)
 		end
 
 		x = x + math.cos(angle) * WORM_CAVE_STEP_LENGTH
 		z = z + math.sin(angle) * WORM_CAVE_STEP_LENGTH
 		y = y + vertical_step
-	end
-end
-
-
--- =========================
--- WORM CAVE LAMP PLACEMENT
--- =========================
-
-local worm_cave_wall_directions = {
-	{x = 1, y = 0, z = 0},
-	{x = -1, y = 0, z = 0},
-	{x = 0, y = 1, z = 0},
-	{x = 0, y = -1, z = 0},
-	{x = 0, y = 0, z = 1},
-	{x = 0, y = 0, z = -1}
-}
-
-
--- lamps are placed after all carving so overlapping paths cannot leave them floating
-local function place_worm_cave_lamps(
-	area,
-	data,
-	lamp_candidates
-)
-
-	for i = 1, #lamp_candidates do
-
-		local candidate = lamp_candidates[i]
-
-		local x = candidate.x
-		local y = candidate.y
-		local z = candidate.z
-
-		if data[candidate.vi] == c_air then
-
-			local hash = get_worm_cave_position_hash(x, y, z)
-			local first_direction = math.floor(hash / WORM_CAVE_LAMP_CHANCE) % #worm_cave_wall_directions + 1
-
-			for offset = 0, #worm_cave_wall_directions - 1 do
-
-				local direction_index =
-					((first_direction - 1 + offset) % #worm_cave_wall_directions)
-					+ 1
-
-				local direction = worm_cave_wall_directions[direction_index]
-
-				local wx = x + direction.x
-				local wy = y + direction.y
-				local wz = z + direction.z
-
-				if wx >= area.MinEdge.x
-				and wx <= area.MaxEdge.x
-				and wy >= area.MinEdge.y
-				and wy <= area.MaxEdge.y
-				and wz >= area.MinEdge.z
-				and wz <= area.MaxEdge.z then
-
-					local wall_vi = area:index(wx, wy, wz)
-					local wall_node = data[wall_vi]
-
-					if wall_node == c_stone
-					or wall_node == c_morstone then
-
-						data[wall_vi] = c_mithril_lamp
-
-						break
-					end
-				end
-			end
-		end
 	end
 end
 
@@ -911,13 +787,12 @@ function lottmapgen.generate_worm_caves(
 	minp,
 	maxp,
 	area,
-	data
+	data,
+	cave_data
 )
 
 	ensure_worm_cave_noises()
 
-	local lamp_candidates = {}
-	local lamp_candidate_lookup = {}
 
 	local min_cell_x = math.floor(minp.x / WORM_CAVE_CELL_SIZE)
 	local max_cell_x = math.floor(maxp.x / WORM_CAVE_CELL_SIZE)
@@ -978,7 +853,7 @@ function lottmapgen.generate_worm_caves(
 							ground_y
 							- pr:next(
 								30,
-								100
+								500
 							)
 					end
 
@@ -1010,38 +885,11 @@ function lottmapgen.generate_worm_caves(
 						maxp,
 						area,
 						data,
-						lamp_candidates,
-						lamp_candidate_lookup
+						cave_data
 					)
 				end
 			end
 		end
 	end
 
-	place_worm_cave_lamps(
-		area,
-		data,
-		lamp_candidates
-	)
-end
-
-
--- =========================
--- CAVE GENERATION
--- =========================
-
--- central entry point for all cave formations
-function lottmapgen.generate_caves(
-	minp,
-	maxp,
-	area,
-	data
-)
-
-	lottmapgen.generate_worm_caves(
-		minp,
-		maxp,
-		area,
-		data
-	)
 end

@@ -70,7 +70,60 @@ end
 
 -- TERRAIN NOISES
 dofile(minetest.get_modpath("lottmapgen").."/noise.lua")
-dofile(minetest.get_modpath("lottmapgen").."/cavenoise.lua")
+
+-- CAVE HANDLING
+dofile(minetest.get_modpath("lottmapgen").."/cave_deco.lua")
+dofile(minetest.get_modpath("lottmapgen").."/cave_worm.lua")
+dofile(minetest.get_modpath("lottmapgen").."/cave_cavern.lua")
+
+-- =========================
+-- CAVE GENERATION
+-- =========================
+
+function lottmapgen.generate_caves(
+	minp,
+	maxp,
+	area,
+	data
+)
+
+	local cave_data = {
+		nodes = {},
+		mask = {}
+	}
+
+	lottmapgen.generate_worm_caves(
+		minp,
+		maxp,
+		area,
+		data,
+		cave_data
+	)
+
+	lottmapgen.generate_caverns(
+		minp,
+		maxp,
+		area,
+		data,
+		cave_data
+	)
+
+	lottmapgen.resolve_cave_surfaces(
+		minp,
+		maxp,
+		area,
+		data,
+		cave_data
+	)
+
+	lottmapgen.generate_cave_decorations(
+		minp,
+		maxp,
+		area,
+		data,
+		cave_data
+	)
+end
 
 -- BIOME HANDLING
 dofile(minetest.get_modpath("lottmapgen").."/biome_helpers.lua")
