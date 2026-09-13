@@ -28,6 +28,15 @@ local CAVE_SYSTEMS_PER_CELL = 4
 -- nearby cells are replayed so paths remain continuous across chunk boundaries
 local CAVE_SEARCH_RADIUS = 3
 
+-- thickness of exposed stone around cave mouths
+local CAVE_ENTRANCE_STONE_RING = 5
+
+-- depth of surface material converted around cave mouths
+local CAVE_ENTRANCE_STONE_DEPTH = 6
+
+-- softens the outer edge of cave mouth stone
+local CAVE_ENTRANCE_STONE_BLEND = 0.85
+
 
 -- =========================
 -- PATH SETTINGS
@@ -37,6 +46,9 @@ local CAVE_STEP_LENGTH = 3
 
 local CAVE_MIN_STEPS = 70
 local CAVE_MAX_STEPS = 120
+
+-- prevents steep terrain changes from breaking tunnel continuity
+local CAVE_MAX_DESCENT_PER_STEP = 6
 
 
 -- =========================
@@ -65,15 +77,21 @@ local CAVE_ENTRANCE_CHANCE = 2
 local CAVE_ENTRANCE_DEPTH_MIN = 1
 local CAVE_ENTRANCE_DEPTH_MAX = 3
 
--- controls how long the path is forced downward after the surface opening
+-- first section forms the downward throat
 local CAVE_ENTRANCE_THROAT_STEPS = 8
 local CAVE_ENTRANCE_DESCENT = 2.5
+
+-- keeps the entrance travelling underground before normal cave behaviour begins
+local CAVE_ENTRANCE_TUNNEL_STEPS = 48
 
 -- keeps the opening narrower than the main tunnel
 local CAVE_ENTRANCE_RADIUS_SCALE = 0.75
 
 -- avoids deliberately opening caves directly beside sea level
 local CAVE_SURFACE_MIN_ABOVE_WATER = 3
+
+-- extra horizontal river clearance around cave spheres
+local CAVE_RIVER_EXTRA_MARGIN = 2
 
 
 -- =========================
@@ -300,6 +318,52 @@ local function get_cave_radius(
 end
 
 
+-- checks whether the cave footprint overlaps river carving
+local function cave_near_river(x, z, radius)
+
+	local sample_radius = math.ceil(radius)
+	local diagonal_radius = math.ceil(sample_radius * 0.707)
+
+	local checks = {
+		{x = 0, z = 0},
+
+		{x = sample_radius, z = 0},
+		{x = -sample_radius, z = 0},
+		{x = 0, z = sample_radius},
+		{x = 0, z = -sample_radius},
+
+		{x = diagonal_radius, z = diagonal_radius},
+		{x = diagonal_radius, z = -diagonal_radius},
+		{x = -diagonal_radius, z = diagonal_radius},
+		{x = -diagonal_radius, z = -diagonal_radius}
+	}
+
+	for i = 1, #checks do
+
+		local check = checks[i]
+
+		local water_mask = lottmapgen.get_water(
+			math.floor(x + check.x),
+			math.floor(z + check.z)
+		)
+
+		local river_strength = 1 - water_mask
+
+		river_strength = lottmapgen.smoothstep(
+			0.2,
+			0.8,
+			river_strength
+		)
+
+		if river_strength > 0 then
+			return true
+		end
+	end
+
+	return false
+end
+
+
 -- checks whether a path sphere can affect the current mapgen area
 local function cave_point_near_chunk(
 	x,
@@ -378,7 +442,9 @@ local function carve_deformed_sphere(
 		return
 	end
 
-	local max_radius = radius * (1 + CAVE_DEFORMATION)
+	local stone_ring = surface_opening and CAVE_ENTRANCE_STONE_RING or 0
+
+	local max_radius = radius * (1 + CAVE_DEFORMATION) + stone_ring
 	local max_radius_sq = max_radius * max_radius
 
 	if cx + max_radius < minp.x
@@ -406,6 +472,12 @@ local function carve_deformed_sphere(
 			local dz = z - cz
 			local horizontal_sq = dx * dx + dz * dz
 
+			local surface_y
+
+			if surface_opening then
+				surface_y = lottmapgen.get_terrain_height(x, z)
+			end
+
 			if horizontal_sq <= max_radius_sq then
 				for y = ymin, ymax do
 
@@ -421,11 +493,12 @@ local function carve_deformed_sphere(
 						})
 
 						local local_radius = radius + deformation * radius * CAVE_DEFORMATION
+						local stone_radius = local_radius + stone_ring
+
+						local vi = area:index(x, y, z)
+						local current = data[vi]
 
 						if distance_sq <= local_radius * local_radius then
-
-							local vi = area:index(x, y, z)
-							local current = data[vi]
 
 							local carveable =
 								current == c_stone
@@ -453,12 +526,103 @@ local function carve_deformed_sphere(
 									)
 								end
 							end
+
+						elseif surface_opening
+						and distance_sq <= stone_radius * stone_radius
+						and current ~= c_air
+						and current ~= c_water
+						and y >= surface_y - CAVE_ENTRANCE_STONE_DEPTH
+						and y <= surface_y + 1 then
+
+							local distance = math.sqrt(distance_sq)
+							local ring_width = stone_radius - local_radius
+							local ring_position = 0
+
+							if ring_width > 0 then
+								ring_position = clamp(
+									(distance - local_radius) / ring_width,
+									0,
+									1
+								)
+							end
+
+							-- small solid core with a long dithered fade into surrounding terrain
+							if ring_position <= 0.2 then
+
+								data[vi] = c_stone
+
+							else
+
+								local blend = 1 - ((ring_position - 0.2) / 0.8)
+								blend = clamp(blend, 0, 1)
+
+								-- keeps scattered stone farther into the outer edge
+								blend = math.sqrt(blend)
+
+								local hash = get_position_hash(x, y, z)
+								local dither = (hash % 1000) / 1000
+
+								if dither < blend * CAVE_ENTRANCE_STONE_BLEND then
+									data[vi] = c_stone
+								end
+							end
 						end
 					end
 				end
 			end
 		end
 	end
+end
+
+
+-- =========================
+-- PATH DESCENT
+-- =========================
+
+-- fills large downward terrain corrections with overlapping spheres
+local function move_cave_down(
+	x,
+	y,
+	z,
+	target_y,
+	radius,
+	minp,
+	maxp,
+	area,
+	data,
+	lamp_candidates,
+	lamp_candidate_lookup
+)
+
+	while y - target_y > CAVE_MAX_DESCENT_PER_STEP do
+
+		y = y - CAVE_MAX_DESCENT_PER_STEP
+
+		if cave_point_near_chunk(
+			x,
+			y,
+			z,
+			minp,
+			maxp
+		) then
+
+			carve_deformed_sphere(
+				x,
+				y,
+				z,
+				radius,
+				false,
+				minp,
+				maxp,
+				area,
+				data,
+				lamp_candidates,
+				lamp_candidate_lookup
+			)
+		end
+	end
+
+	return target_y
 end
 
 
@@ -488,6 +652,11 @@ local function generate_cave_path(
 	local y = start_y
 	local z = start_z
 
+	local entrance_ground_y = lottmapgen.get_terrain_height(
+		math.floor(start_x),
+		math.floor(start_z)
+	)
+
 	local turn_strength = get_path_turn_strength(path_type)
 
 	for step = 1, steps do
@@ -514,40 +683,142 @@ local function generate_cave_path(
 		local sample_x = math.floor(x)
 		local sample_z = math.floor(z)
 
-		local ground_y = lottmapgen.get_terrain_height(sample_x, sample_z)
+		local ground_y = lottmapgen.get_terrain_height(
+			sample_x,
+			sample_z
+		)
+
 		local maximum_radius = radius * (1 + CAVE_DEFORMATION)
+		local river_radius = maximum_radius + CAVE_RIVER_EXTRA_MARGIN
 
 		local surface_opening = false
 		local carve_radius = radius
 
 		if surface_path
-		and step <= CAVE_ENTRANCE_THROAT_STEPS
-		and ground_y >= lottmapgen.WATER_LEVEL + CAVE_SURFACE_MIN_ABOVE_WATER then
+		and step <= CAVE_ENTRANCE_THROAT_STEPS then
 
 			if step == 1 then
 
 				-- only one sphere intersects the surface to keep the opening circular
-				y = ground_y - radius * 0.35
+				y = entrance_ground_y - radius * 0.35
 
 				surface_opening = true
 				carve_radius = radius * CAVE_ENTRANCE_RADIUS_SCALE
 
 			else
 
-				-- force the following spheres downward to form the entrance throat
-				local target_y = ground_y - radius - (step - 1) * CAVE_ENTRANCE_DESCENT
+				-- force the first section downward to establish the entrance throat
+				local target_y =
+					entrance_ground_y
+					- radius
+					- (step - 1) * CAVE_ENTRANCE_DESCENT
 
 				if y > target_y then
 					y = target_y
 				end
 			end
 
+		elseif surface_path
+		and step <= CAVE_ENTRANCE_TUNNEL_STEPS then
+
+			-- keep a guaranteed underground tunnel after the entrance throat
+			local target_y =
+				entrance_ground_y
+				- radius
+				- (CAVE_ENTRANCE_THROAT_STEPS - 1)
+				* CAVE_ENTRANCE_DESCENT
+
+			local near_river = cave_near_river(
+				x,
+				z,
+				river_radius
+			)
+
+			if near_river then
+
+				local river_safe_y =
+					-5
+					- maximum_radius
+					- CAVE_UNDERGROUND
+
+				if y > river_safe_y then
+
+					y = move_cave_down(
+						x,
+						y,
+						z,
+						river_safe_y,
+						radius,
+						minp,
+						maxp,
+						area,
+						data,
+						lamp_candidates,
+						lamp_candidate_lookup
+					)
+				end
+
+			elseif y > target_y then
+
+				y = target_y
+			end
+
 		else
 
-			local maximum_y = ground_y - maximum_radius - CAVE_UNDERGROUND
+			local safe_surface_y = ground_y
+
+			local near_river = cave_near_river(
+				x,
+				z,
+				river_radius
+			)
+
+			if near_river then
+				safe_surface_y = math.min(
+					safe_surface_y,
+					-5
+				)
+			end
+
+			local maximum_y =
+				safe_surface_y
+				- maximum_radius
+				- CAVE_UNDERGROUND
 
 			if y > maximum_y then
-				y = maximum_y
+
+				if near_river then
+
+					y = move_cave_down(
+						x,
+						y,
+						z,
+						maximum_y,
+						radius,
+						minp,
+						maxp,
+						area,
+						data,
+						lamp_candidates,
+						lamp_candidate_lookup
+					)
+
+				else
+
+					y = move_cave_down(
+						x,
+						y,
+						z,
+						maximum_y,
+						radius,
+						minp,
+						maxp,
+						area,
+						data,
+						lamp_candidates,
+						lamp_candidate_lookup
+					)
+				end
 			end
 		end
 
@@ -617,7 +888,10 @@ local function place_cave_lamps(
 
 			for offset = 0, #wall_directions - 1 do
 
-				local direction_index = ((first_direction - 1 + offset) % #wall_directions) + 1
+				local direction_index =
+					((first_direction - 1 + offset) % #wall_directions)
+					+ 1
+
 				local direction = wall_directions[direction_index]
 
 				local wx = x + direction.x
@@ -684,50 +958,81 @@ function lottmapgen.generate_caves(
 				local start_x = cell_min_x + pr:next(0, CAVE_CELL_SIZE - 1)
 				local start_z = cell_min_z + pr:next(0, CAVE_CELL_SIZE - 1)
 
-				local ground_y = lottmapgen.get_terrain_height(start_x, start_z)
+				local biome_id = lottmapgen.get_raw_biome_id(
+					start_x,
+					start_z
+				)
 
-				local surface_path = pr:next(1, CAVE_ENTRANCE_CHANCE) == 1
-				local start_y
+				-- caves may travel beneath ocean biomes but never originate in them
+				if biome_id ~= 1 then
 
-				if surface_path
-				and ground_y >= lottmapgen.WATER_LEVEL + CAVE_SURFACE_MIN_ABOVE_WATER then
-
-					start_y = ground_y - pr:next(
-						CAVE_ENTRANCE_DEPTH_MIN,
-						CAVE_ENTRANCE_DEPTH_MAX
+					local ground_y = lottmapgen.get_terrain_height(
+						start_x,
+						start_z
 					)
 
-				else
+					local surface_path =
+						pr:next(
+							1,
+							CAVE_ENTRANCE_CHANCE
+						) == 1
 
-					surface_path = false
-					start_y = ground_y - pr:next(30, 100)
+					local start_y
+
+					if surface_path
+					and ground_y >= lottmapgen.WATER_LEVEL + CAVE_SURFACE_MIN_ABOVE_WATER then
+
+						start_y =
+							ground_y
+							- pr:next(
+								CAVE_ENTRANCE_DEPTH_MIN,
+								CAVE_ENTRANCE_DEPTH_MAX
+							)
+
+					else
+
+						surface_path = false
+
+						start_y =
+							ground_y
+							- pr:next(
+								30,
+								100
+							)
+					end
+
+					local angle = pr:next(0, 6283) / 1000
+
+					local steps = pr:next(
+						CAVE_MIN_STEPS,
+						CAVE_MAX_STEPS
+					)
+
+					local path_type =
+						((path_index - 1 + pr:next(0, 2)) % 3)
+						+ 1
+
+					local size_phase = pr:next(0, 6283) / 1000
+					local size_rate = pr:next(120, 240) / 1000
+
+					generate_cave_path(
+						start_x,
+						start_y,
+						start_z,
+						angle,
+						steps,
+						path_type,
+						size_phase,
+						size_rate,
+						surface_path,
+						minp,
+						maxp,
+						area,
+						data,
+						lamp_candidates,
+						lamp_candidate_lookup
+					)
 				end
-
-				local angle = pr:next(0, 6283) / 1000
-				local steps = pr:next(CAVE_MIN_STEPS, CAVE_MAX_STEPS)
-
-				local path_type = ((path_index - 1 + pr:next(0, 2)) % 3) + 1
-
-				local size_phase = pr:next(0, 6283) / 1000
-				local size_rate = pr:next(120, 240) / 1000
-
-				generate_cave_path(
-					start_x,
-					start_y,
-					start_z,
-					angle,
-					steps,
-					path_type,
-					size_phase,
-					size_rate,
-					surface_path,
-					minp,
-					maxp,
-					area,
-					data,
-					lamp_candidates,
-					lamp_candidate_lookup
-				)
 			end
 		end
 	end

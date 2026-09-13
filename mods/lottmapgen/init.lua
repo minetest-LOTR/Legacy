@@ -17,7 +17,7 @@ dofile(minetest.get_modpath("lottmapgen").."/schematics.lua")
 lottmapgen.MAP_WIDTH = meta.width
 lottmapgen.MAP_HEIGHT = meta.height
 
-lottmapgen.MAP_SCALE = 4 -- production scale: 16
+lottmapgen.MAP_SCALE = 8 -- production scale: 16
 lottmapgen.BIOME_WARP = lottmapgen.MAP_SCALE
 
 lottmapgen.WATER_LEVEL = 0
@@ -312,33 +312,33 @@ core.register_on_generated(function(minp, maxp)
 	-- Decoration ORIGINS belong to this chunk.
 	-- The decoration itself may write into the
 	-- VoxelManip overgeneration area.
-	
+
 	for z = minp.z, maxp.z do
 		for x = minp.x, maxp.x do
 			local biome_id = lottmapgen.get_blended_biome_id(x, z)
-	
+
 			if biome_id >= 100 then
 				local ground_y = lottmapgen.get_terrain_height(x, z)
-	
+
 				if ground_y >= lottmapgen.WATER_LEVEL
 				and ground_y >= minp.y
 				and ground_y <= maxp.y then
-	
+
 					local surface_vi = area:index(
 						x,
 						ground_y,
 						z
 					)
-	
+
 					local above_vi = area:index(
 						x,
 						ground_y + 1,
 						z
 					)
-	
+
 					local surface_node = data[surface_vi]
 					local above_node = data[above_vi]
-	
+
 					-- Only decorate if the original terrain
 					-- surface still exists after cave carving.
 					--
@@ -346,7 +346,7 @@ core.register_on_generated(function(minp, maxp)
 					-- inside cave mouths or on carved-away surface.
 					if surface_node ~= c_air
 					and above_node == c_air then
-	
+
 						lottmapgen.decorate_surface(
 							biome_id,
 							x,
