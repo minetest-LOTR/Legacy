@@ -1,5 +1,5 @@
 -- =========================
--- CAVE GENERATION
+-- WORM CAVE GENERATION
 -- =========================
 
 local c_air = core.get_content_id("air")
@@ -12,117 +12,117 @@ local c_mithril_lamp = core.get_content_id("lottblocks:mithril_stonelamp")
 
 
 -- =========================
--- SETTINGS
+-- WORM CAVE SETTINGS
 -- =========================
 
 -- keeps normal tunnels below the terrain surface
-local CAVE_UNDERGROUND = 5
+local WORM_CAVE_UNDERGROUND = 5
 
 -- used instead of the mapblock seed so cave paths remain persistent across chunks
-local CAVE_BASE_SEED = 14320
+local WORM_CAVE_BASE_SEED = 14320
 
--- each cell owns a deterministic set of cave paths
-local CAVE_CELL_SIZE = 160
-local CAVE_SYSTEMS_PER_CELL = 4
+-- each cell owns a deterministic set of worm cave paths
+local WORM_CAVE_CELL_SIZE = 160
+local WORM_CAVE_SYSTEMS_PER_CELL = 4
 
 -- nearby cells are replayed so paths remain continuous across chunk boundaries
-local CAVE_SEARCH_RADIUS = 3
+local WORM_CAVE_SEARCH_RADIUS = 3
 
 -- thickness of exposed stone around cave mouths
-local CAVE_ENTRANCE_STONE_RING = 5
+local WORM_CAVE_ENTRANCE_STONE_RING = 5
 
 -- depth of surface material converted around cave mouths
-local CAVE_ENTRANCE_STONE_DEPTH = 6
+local WORM_CAVE_ENTRANCE_STONE_DEPTH = 6
 
 -- softens the outer edge of cave mouth stone
-local CAVE_ENTRANCE_STONE_BLEND = 0.85
+local WORM_CAVE_ENTRANCE_STONE_BLEND = 0.85
 
 
 -- =========================
--- PATH SETTINGS
+-- WORM CAVE PATH SETTINGS
 -- =========================
 
-local CAVE_STEP_LENGTH = 3
+local WORM_CAVE_STEP_LENGTH = 3
 
-local CAVE_MIN_STEPS = 70
-local CAVE_MAX_STEPS = 120
+local WORM_CAVE_MIN_STEPS = 70
+local WORM_CAVE_MAX_STEPS = 120
 
 -- prevents steep terrain changes from breaking tunnel continuity
-local CAVE_MAX_DESCENT_PER_STEP = 6
+local WORM_CAVE_MAX_DESCENT_PER_STEP = 6
 
 
 -- =========================
--- SIZE SETTINGS
+-- WORM CAVE SIZE SETTINGS
 -- =========================
 
-local CAVE_SIZE_SCALE = 0.75
-local CAVE_SIZE_FLUCTUATION = 0.22
+local WORM_CAVE_SIZE_SCALE = 0.75
+local WORM_CAVE_SIZE_FLUCTUATION = 0.22
 
-local CAVE_MIN_RADIUS = 5
-local CAVE_MAX_RADIUS = 13
+local WORM_CAVE_MIN_RADIUS = 5
+local WORM_CAVE_MAX_RADIUS = 13
 
-local CAVE_DEFORMATION = 0.30
+local WORM_CAVE_DEFORMATION = 0.30
 
 -- used for chunk proximity checks before expensive voxel carving
-local CAVE_MAX_CARVE_RADIUS = CAVE_MAX_RADIUS * (1 + CAVE_DEFORMATION)
+local WORM_CAVE_MAX_CARVE_RADIUS = WORM_CAVE_MAX_RADIUS * (1 + WORM_CAVE_DEFORMATION)
 
 
 -- =========================
--- SURFACE ENTRANCES
+-- WORM CAVE SURFACE ENTRANCES
 -- =========================
 
 -- one in this many paths becomes a surface entrance
-local CAVE_ENTRANCE_CHANCE = 2
+local WORM_CAVE_ENTRANCE_CHANCE = 2
 
-local CAVE_ENTRANCE_DEPTH_MIN = 1
-local CAVE_ENTRANCE_DEPTH_MAX = 3
+local WORM_CAVE_ENTRANCE_DEPTH_MIN = 1
+local WORM_CAVE_ENTRANCE_DEPTH_MAX = 3
 
 -- first section forms the downward throat
-local CAVE_ENTRANCE_THROAT_STEPS = 8
-local CAVE_ENTRANCE_DESCENT = 2.5
+local WORM_CAVE_ENTRANCE_THROAT_STEPS = 8
+local WORM_CAVE_ENTRANCE_DESCENT = 2.5
 
 -- keeps the entrance travelling underground before normal cave behaviour begins
-local CAVE_ENTRANCE_TUNNEL_STEPS = 48
+local WORM_CAVE_ENTRANCE_TUNNEL_STEPS = 48
 
 -- keeps the opening narrower than the main tunnel
-local CAVE_ENTRANCE_RADIUS_SCALE = 0.75
+local WORM_CAVE_ENTRANCE_RADIUS_SCALE = 0.75
 
 -- avoids deliberately opening caves directly beside sea level
-local CAVE_SURFACE_MIN_ABOVE_WATER = 3
+local WORM_CAVE_SURFACE_MIN_ABOVE_WATER = 3
 
 -- extra horizontal river clearance around cave spheres
-local CAVE_RIVER_EXTRA_MARGIN = 2
+local WORM_CAVE_RIVER_EXTRA_MARGIN = 2
 
 
 -- =========================
--- CAVE LIGHTING
+-- WORM CAVE LIGHTING
 -- =========================
 
 -- lower values place lamps more frequently
-local CAVE_LAMP_CHANCE = 100
+local WORM_CAVE_LAMP_CHANCE = 100
 
 
 -- =========================
--- NOISES
+-- WORM CAVE NOISES
 -- =========================
 
-local cave_path_noise_1 = nil
-local cave_path_noise_2 = nil
-local cave_path_noise_3 = nil
+local worm_cave_path_noise_1 = nil
+local worm_cave_path_noise_2 = nil
+local worm_cave_path_noise_3 = nil
 
-local cave_vertical_noise = nil
-local cave_width_noise = nil
-local cave_shape_noise = nil
+local worm_cave_vertical_noise = nil
+local worm_cave_width_noise = nil
+local worm_cave_shape_noise = nil
 
 
 -- noises are created lazily because mapgen noise objects may not be available at load time
-local function ensure_cave_noises()
+local function ensure_worm_cave_noises()
 
-	if cave_path_noise_1 then
+	if worm_cave_path_noise_1 then
 		return
 	end
 
-	cave_path_noise_1 = core.get_value_noise({
+	worm_cave_path_noise_1 = core.get_value_noise({
 		offset = 0,
 		scale = 1,
 
@@ -138,7 +138,7 @@ local function ensure_cave_noises()
 		lacunarity = 2.0
 	})
 
-	cave_path_noise_2 = core.get_value_noise({
+	worm_cave_path_noise_2 = core.get_value_noise({
 		offset = 0,
 		scale = 1,
 
@@ -154,7 +154,7 @@ local function ensure_cave_noises()
 		lacunarity = 2.1
 	})
 
-	cave_path_noise_3 = core.get_value_noise({
+	worm_cave_path_noise_3 = core.get_value_noise({
 		offset = 0,
 		scale = 1,
 
@@ -170,7 +170,7 @@ local function ensure_cave_noises()
 		lacunarity = 2.0
 	})
 
-	cave_vertical_noise = core.get_value_noise({
+	worm_cave_vertical_noise = core.get_value_noise({
 		offset = 0,
 		scale = 1,
 
@@ -186,7 +186,7 @@ local function ensure_cave_noises()
 		lacunarity = 2.0
 	})
 
-	cave_width_noise = core.get_value_noise({
+	worm_cave_width_noise = core.get_value_noise({
 		offset = 0,
 		scale = 1,
 
@@ -202,7 +202,7 @@ local function ensure_cave_noises()
 		lacunarity = 2.0
 	})
 
-	cave_shape_noise = core.get_value_noise({
+	worm_cave_shape_noise = core.get_value_noise({
 		offset = 0,
 		scale = 1,
 
@@ -238,14 +238,14 @@ local function clamp(value, min_value, max_value)
 end
 
 
-local function get_cave_seed(cell_x, cell_z)
-	return CAVE_BASE_SEED + cell_x * 73856093 + cell_z * 19349663
+local function get_worm_cave_seed(cell_x, cell_z)
+	return WORM_CAVE_BASE_SEED + cell_x * 73856093 + cell_z * 19349663
 end
 
 
-local function get_position_hash(x, y, z)
+local function get_worm_cave_position_hash(x, y, z)
 
-	local hash = CAVE_BASE_SEED + x * 73856093 + y * 19349663 + z * 83492791
+	local hash = WORM_CAVE_BASE_SEED + x * 73856093 + y * 19349663 + z * 83492791
 	hash = hash % 2147483647
 
 	if hash < 0 then
@@ -256,30 +256,30 @@ local function get_position_hash(x, y, z)
 end
 
 
-local function get_path_value(path_type, x, z)
+local function get_worm_cave_path_value(path_type, x, z)
 
 	if path_type == 2 then
-		return cave_path_noise_2:get_2d({
+		return worm_cave_path_noise_2:get_2d({
 			x = x,
 			y = z
 		})
 	end
 
 	if path_type == 3 then
-		return cave_path_noise_3:get_2d({
+		return worm_cave_path_noise_3:get_2d({
 			x = x,
 			y = z
 		})
 	end
 
-	return cave_path_noise_1:get_2d({
+	return worm_cave_path_noise_1:get_2d({
 		x = x,
 		y = z
 	})
 end
 
 
-local function get_path_turn_strength(path_type)
+local function get_worm_cave_path_turn_strength(path_type)
 
 	if path_type == 2 then
 		return 0.085
@@ -293,7 +293,7 @@ local function get_path_turn_strength(path_type)
 end
 
 
-local function get_cave_radius(
+local function get_worm_cave_radius(
 	x,
 	z,
 	step,
@@ -301,25 +301,25 @@ local function get_cave_radius(
 	size_rate
 )
 
-	local width = cave_width_noise:get_2d({
+	local width = worm_cave_width_noise:get_2d({
 		x = x,
 		y = z
 	})
 
-	local radius = (11 + width * 4) * CAVE_SIZE_SCALE
+	local radius = (11 + width * 4) * WORM_CAVE_SIZE_SCALE
 	radius = clamp(radius, 6, 11.25)
 
 	local fluctuation = math.sin(size_phase + step * size_rate)
-	local size_multiplier = 1 + fluctuation * CAVE_SIZE_FLUCTUATION
+	local size_multiplier = 1 + fluctuation * WORM_CAVE_SIZE_FLUCTUATION
 
 	radius = radius * size_multiplier
 
-	return clamp(radius, CAVE_MIN_RADIUS, CAVE_MAX_RADIUS)
+	return clamp(radius, WORM_CAVE_MIN_RADIUS, WORM_CAVE_MAX_RADIUS)
 end
 
 
--- checks whether the cave footprint overlaps river carving
-local function cave_near_river(x, z, radius)
+-- checks whether the worm cave footprint overlaps river carving
+local function worm_cave_near_river(x, z, radius)
 
 	local sample_radius = math.ceil(radius)
 	local diagonal_radius = math.ceil(sample_radius * 0.707)
@@ -365,7 +365,7 @@ end
 
 
 -- checks whether a path sphere can affect the current mapgen area
-local function cave_point_near_chunk(
+local function worm_cave_point_near_chunk(
 	x,
 	y,
 	z,
@@ -373,7 +373,7 @@ local function cave_point_near_chunk(
 	maxp
 )
 
-	local margin = CAVE_MAX_CARVE_RADIUS + 2
+	local margin = WORM_CAVE_MAX_CARVE_RADIUS + 2
 
 	return x + margin >= minp.x
 		and x - margin <= maxp.x
@@ -385,10 +385,10 @@ end
 
 
 -- =========================
--- LAMP CANDIDATES
+-- WORM CAVE LAMP CANDIDATES
 -- =========================
 
-local function add_lamp_candidate(
+local function add_worm_cave_lamp_candidate(
 	x,
 	y,
 	z,
@@ -397,9 +397,9 @@ local function add_lamp_candidate(
 	lamp_candidate_lookup
 )
 
-	local hash = get_position_hash(x, y, z)
+	local hash = get_worm_cave_position_hash(x, y, z)
 
-	if hash % CAVE_LAMP_CHANCE ~= 0 then
+	if hash % WORM_CAVE_LAMP_CHANCE ~= 0 then
 		return
 	end
 
@@ -421,10 +421,10 @@ end
 
 
 -- =========================
--- SPHERE CARVING
+-- WORM CAVE SPHERE CARVING
 -- =========================
 
-local function carve_deformed_sphere(
+local function carve_worm_cave_sphere(
 	cx,
 	cy,
 	cz,
@@ -442,9 +442,9 @@ local function carve_deformed_sphere(
 		return
 	end
 
-	local stone_ring = surface_opening and CAVE_ENTRANCE_STONE_RING or 0
+	local stone_ring = surface_opening and WORM_CAVE_ENTRANCE_STONE_RING or 0
 
-	local max_radius = radius * (1 + CAVE_DEFORMATION) + stone_ring
+	local max_radius = radius * (1 + WORM_CAVE_DEFORMATION) + stone_ring
 	local max_radius_sq = max_radius * max_radius
 
 	if cx + max_radius < minp.x
@@ -486,13 +486,13 @@ local function carve_deformed_sphere(
 
 					if distance_sq <= max_radius_sq then
 
-						local deformation = cave_shape_noise:get_3d({
+						local deformation = worm_cave_shape_noise:get_3d({
 							x = x,
 							y = y,
 							z = z
 						})
 
-						local local_radius = radius + deformation * radius * CAVE_DEFORMATION
+						local local_radius = radius + deformation * radius * WORM_CAVE_DEFORMATION
 						local stone_radius = local_radius + stone_ring
 
 						local vi = area:index(x, y, z)
@@ -516,7 +516,7 @@ local function carve_deformed_sphere(
 								data[vi] = c_air
 
 								if not surface_opening then
-									add_lamp_candidate(
+									add_worm_cave_lamp_candidate(
 										x,
 										y,
 										z,
@@ -531,7 +531,7 @@ local function carve_deformed_sphere(
 						and distance_sq <= stone_radius * stone_radius
 						and current ~= c_air
 						and current ~= c_water
-						and y >= surface_y - CAVE_ENTRANCE_STONE_DEPTH
+						and y >= surface_y - WORM_CAVE_ENTRANCE_STONE_DEPTH
 						and y <= surface_y + 1 then
 
 							local distance = math.sqrt(distance_sq)
@@ -559,10 +559,10 @@ local function carve_deformed_sphere(
 								-- keeps scattered stone farther into the outer edge
 								blend = math.sqrt(blend)
 
-								local hash = get_position_hash(x, y, z)
+								local hash = get_worm_cave_position_hash(x, y, z)
 								local dither = (hash % 1000) / 1000
 
-								if dither < blend * CAVE_ENTRANCE_STONE_BLEND then
+								if dither < blend * WORM_CAVE_ENTRANCE_STONE_BLEND then
 									data[vi] = c_stone
 								end
 							end
@@ -576,11 +576,11 @@ end
 
 
 -- =========================
--- PATH DESCENT
+-- WORM CAVE PATH DESCENT
 -- =========================
 
 -- fills large downward terrain corrections with overlapping spheres
-local function move_cave_down(
+local function move_worm_cave_down(
 	x,
 	y,
 	z,
@@ -594,11 +594,11 @@ local function move_cave_down(
 	lamp_candidate_lookup
 )
 
-	while y - target_y > CAVE_MAX_DESCENT_PER_STEP do
+	while y - target_y > WORM_CAVE_MAX_DESCENT_PER_STEP do
 
-		y = y - CAVE_MAX_DESCENT_PER_STEP
+		y = y - WORM_CAVE_MAX_DESCENT_PER_STEP
 
-		if cave_point_near_chunk(
+		if worm_cave_point_near_chunk(
 			x,
 			y,
 			z,
@@ -606,7 +606,7 @@ local function move_cave_down(
 			maxp
 		) then
 
-			carve_deformed_sphere(
+			carve_worm_cave_sphere(
 				x,
 				y,
 				z,
@@ -627,10 +627,10 @@ end
 
 
 -- =========================
--- PATH GENERATION
+-- WORM CAVE PATH GENERATION
 -- =========================
 
-local function generate_cave_path(
+local function generate_worm_cave_path(
 	start_x,
 	start_y,
 	start_z,
@@ -657,21 +657,21 @@ local function generate_cave_path(
 		math.floor(start_z)
 	)
 
-	local turn_strength = get_path_turn_strength(path_type)
+	local turn_strength = get_worm_cave_path_turn_strength(path_type)
 
 	for step = 1, steps do
 
-		local path_value = get_path_value(path_type, x, z)
+		local path_value = get_worm_cave_path_value(path_type, x, z)
 		angle = angle + path_value * turn_strength
 
-		local vertical = cave_vertical_noise:get_2d({
+		local vertical = worm_cave_vertical_noise:get_2d({
 			x = x + 5000,
 			y = z - 5000
 		})
 
 		local vertical_step = vertical * 1.5
 
-		local radius = get_cave_radius(
+		local radius = get_worm_cave_radius(
 			x,
 			z,
 			step,
@@ -688,14 +688,14 @@ local function generate_cave_path(
 			sample_z
 		)
 
-		local maximum_radius = radius * (1 + CAVE_DEFORMATION)
-		local river_radius = maximum_radius + CAVE_RIVER_EXTRA_MARGIN
+		local maximum_radius = radius * (1 + WORM_CAVE_DEFORMATION)
+		local river_radius = maximum_radius + WORM_CAVE_RIVER_EXTRA_MARGIN
 
 		local surface_opening = false
 		local carve_radius = radius
 
 		if surface_path
-		and step <= CAVE_ENTRANCE_THROAT_STEPS then
+		and step <= WORM_CAVE_ENTRANCE_THROAT_STEPS then
 
 			if step == 1 then
 
@@ -703,7 +703,7 @@ local function generate_cave_path(
 				y = entrance_ground_y - radius * 0.35
 
 				surface_opening = true
-				carve_radius = radius * CAVE_ENTRANCE_RADIUS_SCALE
+				carve_radius = radius * WORM_CAVE_ENTRANCE_RADIUS_SCALE
 
 			else
 
@@ -711,7 +711,7 @@ local function generate_cave_path(
 				local target_y =
 					entrance_ground_y
 					- radius
-					- (step - 1) * CAVE_ENTRANCE_DESCENT
+					- (step - 1) * WORM_CAVE_ENTRANCE_DESCENT
 
 				if y > target_y then
 					y = target_y
@@ -719,16 +719,16 @@ local function generate_cave_path(
 			end
 
 		elseif surface_path
-		and step <= CAVE_ENTRANCE_TUNNEL_STEPS then
+		and step <= WORM_CAVE_ENTRANCE_TUNNEL_STEPS then
 
 			-- keep a guaranteed underground tunnel after the entrance throat
 			local target_y =
 				entrance_ground_y
 				- radius
-				- (CAVE_ENTRANCE_THROAT_STEPS - 1)
-				* CAVE_ENTRANCE_DESCENT
+				- (WORM_CAVE_ENTRANCE_THROAT_STEPS - 1)
+				* WORM_CAVE_ENTRANCE_DESCENT
 
-			local near_river = cave_near_river(
+			local near_river = worm_cave_near_river(
 				x,
 				z,
 				river_radius
@@ -739,11 +739,11 @@ local function generate_cave_path(
 				local river_safe_y =
 					-5
 					- maximum_radius
-					- CAVE_UNDERGROUND
+					- WORM_CAVE_UNDERGROUND
 
 				if y > river_safe_y then
 
-					y = move_cave_down(
+					y = move_worm_cave_down(
 						x,
 						y,
 						z,
@@ -767,7 +767,7 @@ local function generate_cave_path(
 
 			local safe_surface_y = ground_y
 
-			local near_river = cave_near_river(
+			local near_river = worm_cave_near_river(
 				x,
 				z,
 				river_radius
@@ -783,46 +783,27 @@ local function generate_cave_path(
 			local maximum_y =
 				safe_surface_y
 				- maximum_radius
-				- CAVE_UNDERGROUND
+				- WORM_CAVE_UNDERGROUND
 
 			if y > maximum_y then
 
-				if near_river then
-
-					y = move_cave_down(
-						x,
-						y,
-						z,
-						maximum_y,
-						radius,
-						minp,
-						maxp,
-						area,
-						data,
-						lamp_candidates,
-						lamp_candidate_lookup
-					)
-
-				else
-
-					y = move_cave_down(
-						x,
-						y,
-						z,
-						maximum_y,
-						radius,
-						minp,
-						maxp,
-						area,
-						data,
-						lamp_candidates,
-						lamp_candidate_lookup
-					)
-				end
+				y = move_worm_cave_down(
+					x,
+					y,
+					z,
+					maximum_y,
+					radius,
+					minp,
+					maxp,
+					area,
+					data,
+					lamp_candidates,
+					lamp_candidate_lookup
+				)
 			end
 		end
 
-		if cave_point_near_chunk(
+		if worm_cave_point_near_chunk(
 			x,
 			y,
 			z,
@@ -830,7 +811,7 @@ local function generate_cave_path(
 			maxp
 		) then
 
-			carve_deformed_sphere(
+			carve_worm_cave_sphere(
 				x,
 				y,
 				z,
@@ -845,18 +826,18 @@ local function generate_cave_path(
 			)
 		end
 
-		x = x + math.cos(angle) * CAVE_STEP_LENGTH
-		z = z + math.sin(angle) * CAVE_STEP_LENGTH
+		x = x + math.cos(angle) * WORM_CAVE_STEP_LENGTH
+		z = z + math.sin(angle) * WORM_CAVE_STEP_LENGTH
 		y = y + vertical_step
 	end
 end
 
 
 -- =========================
--- LAMP PLACEMENT
+-- WORM CAVE LAMP PLACEMENT
 -- =========================
 
-local wall_directions = {
+local worm_cave_wall_directions = {
 	{x = 1, y = 0, z = 0},
 	{x = -1, y = 0, z = 0},
 	{x = 0, y = 1, z = 0},
@@ -867,7 +848,7 @@ local wall_directions = {
 
 
 -- lamps are placed after all carving so overlapping paths cannot leave them floating
-local function place_cave_lamps(
+local function place_worm_cave_lamps(
 	area,
 	data,
 	lamp_candidates
@@ -883,16 +864,16 @@ local function place_cave_lamps(
 
 		if data[candidate.vi] == c_air then
 
-			local hash = get_position_hash(x, y, z)
-			local first_direction = math.floor(hash / CAVE_LAMP_CHANCE) % #wall_directions + 1
+			local hash = get_worm_cave_position_hash(x, y, z)
+			local first_direction = math.floor(hash / WORM_CAVE_LAMP_CHANCE) % #worm_cave_wall_directions + 1
 
-			for offset = 0, #wall_directions - 1 do
+			for offset = 0, #worm_cave_wall_directions - 1 do
 
 				local direction_index =
-					((first_direction - 1 + offset) % #wall_directions)
+					((first_direction - 1 + offset) % #worm_cave_wall_directions)
 					+ 1
 
-				local direction = wall_directions[direction_index]
+				local direction = worm_cave_wall_directions[direction_index]
 
 				local wx = x + direction.x
 				local wy = y + direction.y
@@ -923,47 +904,47 @@ end
 
 
 -- =========================
--- CAVE GENERATION
+-- WORM CAVE GENERATION
 -- =========================
 
-function lottmapgen.generate_caves(
+function lottmapgen.generate_worm_caves(
 	minp,
 	maxp,
 	area,
 	data
 )
 
-	ensure_cave_noises()
+	ensure_worm_cave_noises()
 
 	local lamp_candidates = {}
 	local lamp_candidate_lookup = {}
 
-	local min_cell_x = math.floor(minp.x / CAVE_CELL_SIZE)
-	local max_cell_x = math.floor(maxp.x / CAVE_CELL_SIZE)
+	local min_cell_x = math.floor(minp.x / WORM_CAVE_CELL_SIZE)
+	local max_cell_x = math.floor(maxp.x / WORM_CAVE_CELL_SIZE)
 
-	local min_cell_z = math.floor(minp.z / CAVE_CELL_SIZE)
-	local max_cell_z = math.floor(maxp.z / CAVE_CELL_SIZE)
+	local min_cell_z = math.floor(minp.z / WORM_CAVE_CELL_SIZE)
+	local max_cell_z = math.floor(maxp.z / WORM_CAVE_CELL_SIZE)
 
-	for cell_z = min_cell_z - CAVE_SEARCH_RADIUS, max_cell_z + CAVE_SEARCH_RADIUS do
-		for cell_x = min_cell_x - CAVE_SEARCH_RADIUS, max_cell_x + CAVE_SEARCH_RADIUS do
+	for cell_z = min_cell_z - WORM_CAVE_SEARCH_RADIUS, max_cell_z + WORM_CAVE_SEARCH_RADIUS do
+		for cell_x = min_cell_x - WORM_CAVE_SEARCH_RADIUS, max_cell_x + WORM_CAVE_SEARCH_RADIUS do
 
-			local cave_seed = get_cave_seed(cell_x, cell_z)
-			local pr = PcgRandom(cave_seed)
+			local worm_cave_seed = get_worm_cave_seed(cell_x, cell_z)
+			local pr = PcgRandom(worm_cave_seed)
 
-			local cell_min_x = cell_x * CAVE_CELL_SIZE
-			local cell_min_z = cell_z * CAVE_CELL_SIZE
+			local cell_min_x = cell_x * WORM_CAVE_CELL_SIZE
+			local cell_min_z = cell_z * WORM_CAVE_CELL_SIZE
 
-			for path_index = 1, CAVE_SYSTEMS_PER_CELL do
+			for path_index = 1, WORM_CAVE_SYSTEMS_PER_CELL do
 
-				local start_x = cell_min_x + pr:next(0, CAVE_CELL_SIZE - 1)
-				local start_z = cell_min_z + pr:next(0, CAVE_CELL_SIZE - 1)
+				local start_x = cell_min_x + pr:next(0, WORM_CAVE_CELL_SIZE - 1)
+				local start_z = cell_min_z + pr:next(0, WORM_CAVE_CELL_SIZE - 1)
 
 				local biome_id = lottmapgen.get_raw_biome_id(
 					start_x,
 					start_z
 				)
 
-				-- caves may travel beneath ocean biomes but never originate in them
+				-- worm caves may travel beneath ocean biomes but never originate in them
 				if biome_id ~= 1 then
 
 					local ground_y = lottmapgen.get_terrain_height(
@@ -974,19 +955,19 @@ function lottmapgen.generate_caves(
 					local surface_path =
 						pr:next(
 							1,
-							CAVE_ENTRANCE_CHANCE
+							WORM_CAVE_ENTRANCE_CHANCE
 						) == 1
 
 					local start_y
 
 					if surface_path
-					and ground_y >= lottmapgen.WATER_LEVEL + CAVE_SURFACE_MIN_ABOVE_WATER then
+					and ground_y >= lottmapgen.WATER_LEVEL + WORM_CAVE_SURFACE_MIN_ABOVE_WATER then
 
 						start_y =
 							ground_y
 							- pr:next(
-								CAVE_ENTRANCE_DEPTH_MIN,
-								CAVE_ENTRANCE_DEPTH_MAX
+								WORM_CAVE_ENTRANCE_DEPTH_MIN,
+								WORM_CAVE_ENTRANCE_DEPTH_MAX
 							)
 
 					else
@@ -1004,8 +985,8 @@ function lottmapgen.generate_caves(
 					local angle = pr:next(0, 6283) / 1000
 
 					local steps = pr:next(
-						CAVE_MIN_STEPS,
-						CAVE_MAX_STEPS
+						WORM_CAVE_MIN_STEPS,
+						WORM_CAVE_MAX_STEPS
 					)
 
 					local path_type =
@@ -1015,7 +996,7 @@ function lottmapgen.generate_caves(
 					local size_phase = pr:next(0, 6283) / 1000
 					local size_rate = pr:next(120, 240) / 1000
 
-					generate_cave_path(
+					generate_worm_cave_path(
 						start_x,
 						start_y,
 						start_z,
@@ -1037,9 +1018,30 @@ function lottmapgen.generate_caves(
 		end
 	end
 
-	place_cave_lamps(
+	place_worm_cave_lamps(
 		area,
 		data,
 		lamp_candidates
+	)
+end
+
+
+-- =========================
+-- CAVE GENERATION
+-- =========================
+
+-- central entry point for all cave formations
+function lottmapgen.generate_caves(
+	minp,
+	maxp,
+	area,
+	data
+)
+
+	lottmapgen.generate_worm_caves(
+		minp,
+		maxp,
+		area,
+		data
 	)
 end
