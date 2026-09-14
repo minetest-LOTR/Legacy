@@ -8,6 +8,7 @@ minetest.register_node("lottplants:mushroom_red", {
 	sunlight_propagates = true,
 	walkable = false,
 	buildable_to = true,
+	light_source = 1,
 	groups = {snappy = 3, attached_node = 1, flammable = 1},
 	sounds = default.node_sound_leaves_defaults(),
 	on_use = minetest.item_eat(-5),
@@ -27,6 +28,7 @@ minetest.register_node("lottplants:mushroom_brown", {
 	sunlight_propagates = true,
 	walkable = false,
 	buildable_to = true,
+	light_source = 1,
 	groups = {snappy = 3, attached_node = 1, flammable = 1},
 	sounds = default.node_sound_leaves_defaults(),
 	selection_box = {
@@ -63,7 +65,7 @@ minetest.register_node("lottplants:mushroom_blue", {
 	sunlight_propagates = true,
 	walkable = false,
 	buildable_to = true,
-	light_source = 4,
+	light_source = 7,
 	groups = {snappy = 3, attached_node = 1, flammable = 1},
 	sounds = default.node_sound_leaves_defaults(),
 	selection_box = {
@@ -82,7 +84,7 @@ minetest.register_node("lottplants:mushroom_green", {
 	sunlight_propagates = true,
 	walkable = false,
 	buildable_to = true,
-	light_source = 3,
+	light_source = 7,
 	groups = {snappy = 3, attached_node = 1, flammable = 1},
 	sounds = default.node_sound_leaves_defaults(),
 	selection_box = {

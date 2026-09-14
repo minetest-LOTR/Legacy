@@ -25,6 +25,11 @@ for i = 1, 5 do
 	c_small_stalactites[i] = core.get_content_id("lottblocks:stalactite_stone_" .. i)
 end
 
+local c_mushroom_blue = core.get_content_id("lottplants:mushroom_blue")
+local c_mushroom_green = core.get_content_id("lottplants:mushroom_green")
+local c_mushroom_red = core.get_content_id("lottplants:mushroom_red")
+local c_mushroom_brown = core.get_content_id("lottplants:mushroom_brown")
+
 
 -- =========================
 -- CAVE DECO SETTINGS
@@ -67,34 +72,104 @@ local CAVE_STALACTITE_MIDDLE_MAX = 4
 
 
 -- =========================
+-- MUSHROOM SETTINGS
+-- =========================
+
+-- only noise values above this become mushroom colonies
+-- lower values create more colonies
+local CAVE_MUSHROOM_REGION_THRESHOLD = 0.60
+
+-- controls the physical size of mushroom colonies
+local CAVE_MUSHROOM_REGION_SPREAD_XZ = 55
+local CAVE_MUSHROOM_REGION_SPREAD_Y = 30
+
+-- controls the size of broad blue and green mushroom regions
+local CAVE_MUSHROOM_SPECIES_SPREAD_XZ = 140
+local CAVE_MUSHROOM_SPECIES_SPREAD_Y = 70
+
+-- lower values place mushrooms more densely
+local CAVE_MUSHROOM_EDGE_CHANCE = 18
+local CAVE_MUSHROOM_CORE_CHANCE = 3
+
+-- colony species becomes more dominant toward the center
+local CAVE_MUSHROOM_CORE_SPECIES_MIN = 0.45
+local CAVE_MUSHROOM_CORE_SPECIES_MAX = 0.90
+
+
+-- =========================
 -- CAVE DECO NOISES
 -- =========================
 
 local cave_speleothem_noise = nil
+local cave_mushroom_noise = nil
+local cave_mushroom_species_noise = nil
 
 
 -- created lazily because mapgen noise objects may not be available at load time
 local function ensure_cave_deco_noises()
 
-	if cave_speleothem_noise then
+	if cave_speleothem_noise
+	and cave_mushroom_noise
+	and cave_mushroom_species_noise then
 		return
 	end
 
-	cave_speleothem_noise = core.get_value_noise({
-		offset = 0,
-		scale = 1,
+	if not cave_speleothem_noise then
 
-		spread = {
-			x = 90,
-			y = 50,
-			z = 90
-		},
+		cave_speleothem_noise = core.get_value_noise({
+			offset = 0,
+			scale = 1,
 
-		seed = 16321,
-		octaves = 2,
-		persist = 0.5,
-		lacunarity = 2.0
-	})
+			spread = {
+				x = 90,
+				y = 50,
+				z = 90
+			},
+
+			seed = 16321,
+			octaves = 2,
+			persist = 0.5,
+			lacunarity = 2.0
+		})
+	end
+
+	if not cave_mushroom_noise then
+
+		cave_mushroom_noise = core.get_value_noise({
+			offset = 0,
+			scale = 1,
+
+			spread = {
+				x = CAVE_MUSHROOM_REGION_SPREAD_XZ,
+				y = CAVE_MUSHROOM_REGION_SPREAD_Y,
+				z = CAVE_MUSHROOM_REGION_SPREAD_XZ
+			},
+
+			seed = 16322,
+			octaves = 2,
+			persist = 0.5,
+			lacunarity = 2.0
+		})
+	end
+
+	if not cave_mushroom_species_noise then
+
+		cave_mushroom_species_noise = core.get_value_noise({
+			offset = 0,
+			scale = 1,
+
+			spread = {
+				x = CAVE_MUSHROOM_SPECIES_SPREAD_XZ,
+				y = CAVE_MUSHROOM_SPECIES_SPREAD_Y,
+				z = CAVE_MUSHROOM_SPECIES_SPREAD_XZ
+			},
+
+			seed = 16323,
+			octaves = 2,
+			persist = 0.5,
+			lacunarity = 2.0
+		})
+	end
 end
 
 
@@ -345,6 +420,101 @@ local function get_cave_deco_hash(x, y, z, salt)
 end
 
 
+local function get_density_chance(
+	density,
+	edge_chance,
+	core_chance
+)
+
+	local chance = edge_chance + (core_chance - edge_chance) * density
+
+	return math.max(1, math.floor(chance + 0.5))
+end
+
+
+local function cave_air_available(
+	x,
+	y,
+	z,
+	minp,
+	maxp,
+	area,
+	data,
+	cave_data
+)
+
+	if x < minp.x
+	or x > maxp.x
+	or y < minp.y
+	or y > maxp.y
+	or z < minp.z
+	or z > maxp.z then
+		return false
+	end
+
+	local vi = area:index(x, y, z)
+
+	return cave_data.mask[vi] ~= nil
+		and data[vi] == c_air
+end
+
+
+local function can_place_cave_column(
+	surface,
+	direction,
+	height,
+	minp,
+	maxp,
+	area,
+	data,
+	cave_data
+)
+
+	for offset = 0, height - 1 do
+
+		local y = surface.air_y + direction * offset
+
+		if not cave_air_available(
+			surface.air_x,
+			y,
+			surface.air_z,
+			minp,
+			maxp,
+			area,
+			data,
+			cave_data
+		) then
+			return false
+		end
+	end
+
+	return true
+end
+
+
+local function write_cave_column_node(
+	surface,
+	direction,
+	offset,
+	content_id,
+	area,
+	data
+)
+
+	local vi = area:index(
+		surface.air_x,
+		surface.air_y + direction * offset,
+		surface.air_z
+	)
+
+	data[vi] = content_id
+end
+
+
+-- =========================
+-- SPELEOTHEM REGIONS
+-- =========================
+
 -- returns 0 outside a normal speleothem region and 0..1 inside one
 local function get_cave_speleothem_density(x, y, z)
 
@@ -455,97 +625,6 @@ local function get_cave_drip_density(
 		natural_density,
 		opening_density
 	)
-end
-
-
-local function get_density_chance(
-	density,
-	edge_chance,
-	core_chance
-)
-
-	local chance = edge_chance + (core_chance - edge_chance) * density
-
-	return math.max(1, math.floor(chance + 0.5))
-end
-
-
-local function cave_air_available(
-	x,
-	y,
-	z,
-	minp,
-	maxp,
-	area,
-	data,
-	cave_data
-)
-
-	if x < minp.x
-	or x > maxp.x
-	or y < minp.y
-	or y > maxp.y
-	or z < minp.z
-	or z > maxp.z then
-		return false
-	end
-
-	local vi = area:index(x, y, z)
-
-	return cave_data.mask[vi] ~= nil
-		and data[vi] == c_air
-end
-
-
-local function can_place_cave_column(
-	surface,
-	direction,
-	height,
-	minp,
-	maxp,
-	area,
-	data,
-	cave_data
-)
-
-	for offset = 0, height - 1 do
-
-		local y = surface.air_y + direction * offset
-
-		if not cave_air_available(
-			surface.air_x,
-			y,
-			surface.air_z,
-			minp,
-			maxp,
-			area,
-			data,
-			cave_data
-		) then
-			return false
-		end
-	end
-
-	return true
-end
-
-
-local function write_cave_column_node(
-	surface,
-	direction,
-	offset,
-	content_id,
-	area,
-	data
-)
-
-	local vi = area:index(
-		surface.air_x,
-		surface.air_y + direction * offset,
-		surface.air_z
-	)
-
-	data[vi] = content_id
 end
 
 
@@ -1008,6 +1087,145 @@ end
 
 
 -- =========================
+-- MUSHROOM COLONIES
+-- =========================
+
+-- returns 0 outside mushroom colonies and 0..1 toward colony cores
+local function get_cave_mushroom_density(x, y, z)
+
+	local noise = cave_mushroom_noise:get_3d({
+		x = x,
+		y = y,
+		z = z
+	})
+
+	local normalized = clamp((noise + 1) * 0.5, 0, 1)
+
+	if normalized <= CAVE_MUSHROOM_REGION_THRESHOLD then
+		return 0
+	end
+
+	local density = (normalized - CAVE_MUSHROOM_REGION_THRESHOLD)
+		/ (1 - CAVE_MUSHROOM_REGION_THRESHOLD)
+
+	-- gives colonies stronger centers while keeping softer outer edges
+	return math.sqrt(density)
+end
+
+
+-- broad noise determines whether a colony is primarily blue or green
+local function get_cave_mushroom_colony_species(x, y, z)
+
+	local species_noise = cave_mushroom_species_noise:get_3d({
+		x = x,
+		y = y,
+		z = z
+	})
+
+	if species_noise >= 0 then
+		return c_mushroom_blue
+	end
+
+	return c_mushroom_green
+end
+
+
+-- central blue or green growth dominates while red and brown scatter around it
+local function get_cave_mushroom(
+	x,
+	y,
+	z,
+	density
+)
+
+	local colony_species = get_cave_mushroom_colony_species(
+		x,
+		y,
+		z
+	)
+
+	local hash = get_cave_deco_hash(
+		x,
+		y,
+		z,
+		62
+	)
+
+	local roll = hash % 1000 / 1000
+
+	local colony_species_chance = CAVE_MUSHROOM_CORE_SPECIES_MIN
+		+ (
+			CAVE_MUSHROOM_CORE_SPECIES_MAX
+			- CAVE_MUSHROOM_CORE_SPECIES_MIN
+		)
+		* density
+
+	if roll < colony_species_chance then
+		return colony_species
+	end
+
+	-- red and brown form the secondary scatter around the main colony
+	if hash % 2 == 0 then
+		return c_mushroom_red
+	end
+
+	return c_mushroom_brown
+end
+
+
+local function place_cave_mushrooms(
+	data,
+	cave_data,
+	occupied_surface_lookup
+)
+
+	for i = 1, #cave_data.surfaces.floor do
+
+		local surface = cave_data.surfaces.floor[i]
+
+		-- speleothems take priority over mushrooms
+		if not occupied_surface_lookup[surface.vi]
+		and data[surface.air_vi] == c_air then
+
+			local density = get_cave_mushroom_density(
+				surface.air_x,
+				surface.air_y,
+				surface.air_z
+			)
+
+			if density > 0 then
+
+				local mushroom_chance = get_density_chance(
+					density,
+					CAVE_MUSHROOM_EDGE_CHANCE,
+					CAVE_MUSHROOM_CORE_CHANCE
+				)
+
+				local hash = get_cave_deco_hash(
+					surface.air_x,
+					surface.air_y,
+					surface.air_z,
+					63
+				)
+
+				if hash % mushroom_chance == 0 then
+
+					data[surface.air_vi] = get_cave_mushroom(
+						surface.air_x,
+						surface.air_y,
+						surface.air_z,
+						density
+					)
+
+					occupied_surface_lookup[surface.vi] = true
+				end
+			end
+		end
+	end
+end
+
+
+-- =========================
 -- CAVE LAMPS
 -- =========================
 
@@ -1102,6 +1320,12 @@ function lottmapgen.generate_cave_decorations(
 		area,
 		data,
 		cave_data
+	)
+
+	place_cave_mushrooms(
+		data,
+		cave_data,
+		occupied_surface_lookup
 	)
 
 	local lamp_candidates = collect_cave_lamp_candidates(
