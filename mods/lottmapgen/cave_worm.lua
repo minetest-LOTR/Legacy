@@ -91,6 +91,10 @@ local WORM_CAVE_SURFACE_MIN_ABOVE_WATER = 3
 -- extra horizontal river clearance around cave spheres
 local WORM_CAVE_RIVER_EXTRA_MARGIN = 2
 
+-- reports a point inside the throat for entrance decoration
+-- keeping this away from step 1 prevents formations crowding the visible mouth
+local WORM_CAVE_ENTRANCE_DECO_STEP = 5
+
 
 -- =========================
 -- WORM CAVE NOISES
@@ -242,7 +246,7 @@ local function get_worm_cave_position_hash(x, y, z)
 		hash = hash + 2147483647
 	end
 
-	return math.floor(hash)
+	return hash
 end
 
 
@@ -374,6 +378,26 @@ local function worm_cave_point_near_chunk(
 end
 
 
+-- reports the interior of a surface entrance to later decoration handling
+local function report_worm_cave_surface_opening(
+	x,
+	y,
+	z,
+	cave_data
+)
+
+	if not cave_data.surface_openings then
+		cave_data.surface_openings = {}
+	end
+
+	cave_data.surface_openings[#cave_data.surface_openings + 1] = {
+		x = x,
+		y = y,
+		z = z
+	}
+end
+
+
 -- =========================
 -- WORM CAVE SPHERE CARVING
 -- =========================
@@ -476,7 +500,6 @@ local function carve_worm_cave_sphere(
 									"worm",
 									cave_data
 								)
-
 							end
 
 						elseif surface_opening
@@ -750,6 +773,25 @@ local function generate_worm_cave_path(
 			end
 		end
 
+		-- report one point inside each surface throat for forced cave decoration
+		if surface_path
+		and step == WORM_CAVE_ENTRANCE_DECO_STEP
+		and worm_cave_point_near_chunk(
+			x,
+			y,
+			z,
+			minp,
+			maxp
+		) then
+
+			report_worm_cave_surface_opening(
+				x,
+				y,
+				z,
+				cave_data
+			)
+		end
+
 		if worm_cave_point_near_chunk(
 			x,
 			y,
@@ -792,7 +834,6 @@ function lottmapgen.generate_worm_caves(
 )
 
 	ensure_worm_cave_noises()
-
 
 	local min_cell_x = math.floor(minp.x / WORM_CAVE_CELL_SIZE)
 	local max_cell_x = math.floor(maxp.x / WORM_CAVE_CELL_SIZE)
@@ -891,5 +932,4 @@ function lottmapgen.generate_worm_caves(
 			end
 		end
 	end
-
 end

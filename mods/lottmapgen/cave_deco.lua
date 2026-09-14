@@ -37,6 +37,11 @@ local CAVE_LAMP_CHANCE = 180
 -- lower values create more regions
 local CAVE_SPELEOTHEM_REGION_THRESHOLD = 0.58
 
+-- forced regions around reported worm cave surface entrances
+-- the core is fully dense and the outer radius fades into normal cave handling
+local CAVE_OPENING_REGION_CORE_RADIUS = 8
+local CAVE_OPENING_REGION_RADIUS = 22
+
 -- lower values create more drip sites inside active regions
 local CAVE_DRIP_EDGE_CHANCE = 10
 local CAVE_DRIP_CORE_CHANCE = 2
@@ -340,7 +345,7 @@ local function get_cave_deco_hash(x, y, z, salt)
 end
 
 
--- returns 0 outside a speleothem region and 0..1 inside one
+-- returns 0 outside a normal speleothem region and 0..1 inside one
 local function get_cave_speleothem_density(x, y, z)
 
 	local noise = cave_speleothem_noise:get_3d({
@@ -360,6 +365,96 @@ local function get_cave_speleothem_density(x, y, z)
 
 	-- density rises quickly after entering an active region
 	return math.sqrt(density)
+end
+
+
+-- creates a guaranteed region around reported worm cave surface entrances
+local function get_cave_opening_density(
+	x,
+	y,
+	z,
+	cave_data
+)
+
+	local openings = cave_data.surface_openings
+
+	if not openings then
+		return 0
+	end
+
+	local core_radius_sq =
+		CAVE_OPENING_REGION_CORE_RADIUS
+		* CAVE_OPENING_REGION_CORE_RADIUS
+
+	local region_radius_sq =
+		CAVE_OPENING_REGION_RADIUS
+		* CAVE_OPENING_REGION_RADIUS
+
+	local best_density = 0
+
+	for i = 1, #openings do
+
+		local opening = openings[i]
+
+		local dx = x - opening.x
+		local dy = y - opening.y
+		local dz = z - opening.z
+
+		local distance_sq = dx * dx + dy * dy + dz * dz
+
+		if distance_sq <= core_radius_sq then
+			return 1
+		end
+
+		if distance_sq < region_radius_sq then
+
+			local distance = math.sqrt(distance_sq)
+
+			local density =
+				1
+				- (
+					distance - CAVE_OPENING_REGION_CORE_RADIUS
+				)
+				/ (
+					CAVE_OPENING_REGION_RADIUS
+					- CAVE_OPENING_REGION_CORE_RADIUS
+				)
+
+			if density > best_density then
+				best_density = density
+			end
+		end
+	end
+
+	return best_density
+end
+
+
+-- combines natural cave regions with forced surface entrance regions
+local function get_cave_drip_density(
+	x,
+	y,
+	z,
+	cave_data
+)
+
+	local natural_density = get_cave_speleothem_density(
+		x,
+		y,
+		z
+	)
+
+	local opening_density = get_cave_opening_density(
+		x,
+		y,
+		z,
+		cave_data
+	)
+
+	return math.max(
+		natural_density,
+		opening_density
+	)
 end
 
 
@@ -502,6 +597,7 @@ local function place_large_stalagmite(
 	)
 
 	for offset = 1, middle_count do
+
 		write_cave_column_node(
 			surface,
 			1,
@@ -569,6 +665,7 @@ local function place_large_stalactite(
 	)
 
 	for offset = 1, middle_count do
+
 		write_cave_column_node(
 			surface,
 			-1,
@@ -838,11 +935,12 @@ local function place_cave_drip_fields(
 					(floor_surface.air_y + ceiling_surface.air_y) * 0.5
 				)
 
-				-- the midpoint gives both ends of a drip column one shared region value
-				local density = get_cave_speleothem_density(
+				-- natural noise and surface entrances both contribute to the field
+				local density = get_cave_drip_density(
 					floor_surface.air_x,
 					midpoint_y,
-					floor_surface.air_z
+					floor_surface.air_z,
+					cave_data
 				)
 
 				if density > 0 then
