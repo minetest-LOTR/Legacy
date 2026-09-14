@@ -179,6 +179,13 @@ end
 
 -- records the final cave volume rather than temporary carving surfaces
 -- cavern ownership replaces worm ownership where both formations overlap
+local cave_type_priority = {
+	worm = 1,
+	cavern = 2,
+	vault = 3
+}
+
+
 function lottmapgen.mark_cave_node(
 	x,
 	y,
@@ -192,8 +199,16 @@ function lottmapgen.mark_cave_node(
 
 	if cave_node then
 
-		if cave_type == "cavern" then
-			cave_node.cave_type = "cavern"
+		local current_priority =
+			cave_type_priority[cave_node.cave_type]
+			or 0
+
+		local new_priority =
+			cave_type_priority[cave_type]
+			or 0
+
+		if new_priority > current_priority then
+			cave_node.cave_type = cave_type
 		end
 
 		return
@@ -326,10 +341,11 @@ function lottmapgen.resolve_cave_surfaces(
 		wall = {},
 		floor = {},
 		ceiling = {},
-		worm = {},
-		cavern = {}
-	}
 
+		worm = {},
+		cavern = {},
+		vault = {}
+	}
 	cave_data.surface_lookup = {}
 
 	for i = 1, #cave_data.nodes do
