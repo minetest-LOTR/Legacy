@@ -13,6 +13,9 @@ local c_morstone = core.get_content_id("lottmapgen:mordor_stone")
 -- WORM CAVE SETTINGS
 -- =========================
 
+-- enables detailed worm cave timing and counters
+local WORM_CAVE_PROFILING = false
+
 -- keeps normal tunnels below the terrain surface
 local WORM_CAVE_UNDERGROUND = 5
 
@@ -42,8 +45,8 @@ local WORM_CAVE_ENTRANCE_STONE_BLEND = 0.85
 
 local WORM_CAVE_STEP_LENGTH = 3
 
-local WORM_CAVE_MIN_STEPS = 70
-local WORM_CAVE_MAX_STEPS = 120
+local WORM_CAVE_MIN_STEPS = 180
+local WORM_CAVE_MAX_STEPS = 360
 
 -- prevents steep terrain changes from breaking tunnel continuity
 local WORM_CAVE_MAX_DESCENT_PER_STEP = 6
@@ -63,7 +66,6 @@ local WORM_CAVE_DEFORMATION = 0.30
 
 -- used for chunk proximity checks before expensive voxel carving
 local WORM_CAVE_MAX_CARVE_RADIUS = WORM_CAVE_MAX_RADIUS * (1 + WORM_CAVE_DEFORMATION)
-
 
 -- =========================
 -- WORM CAVE SURFACE ENTRANCES
@@ -232,6 +234,32 @@ local function clamp(value, min_value, max_value)
 end
 
 
+local function profile_add(profile, key, value)
+
+	if profile then
+		profile[key] = profile[key] + value
+	end
+end
+
+
+local function profile_start(profile)
+
+	if profile then
+		return core.get_us_time()
+	end
+
+	return nil
+end
+
+
+local function profile_finish(profile, key, start_time)
+
+	if profile then
+		profile[key] = profile[key] + core.get_us_time() - start_time
+	end
+end
+
+
 local function get_worm_cave_seed(cell_x, cell_z)
 	return WORM_CAVE_BASE_SEED + cell_x * 73856093 + cell_z * 19349663
 end
@@ -312,47 +340,222 @@ local function get_worm_cave_radius(
 end
 
 
+-- caches repeated terrain samples during the current mapgen call
+local function get_cached_terrain_height(
+	x,
+	z,
+	terrain_cache,
+	profile
+)
+
+	x = math.floor(x)
+	z = math.floor(z)
+
+	local row = terrain_cache[x]
+
+	if not row then
+		row = {}
+		terrain_cache[x] = row
+	end
+
+	local height = row[z]
+
+	if height == nil then
+
+		local start_time = profile_start(profile)
+
+		height = lottmapgen.get_terrain_height(x, z)
+		row[z] = height
+
+		profile_finish(profile, "terrain_time", start_time)
+		profile_add(profile, "terrain_samples", 1)
+	end
+
+	return height
+end
+
+
+-- caches repeated water samples during the current mapgen call
+local function get_cached_water(
+	x,
+	z,
+	water_cache,
+	profile
+)
+
+	x = math.floor(x)
+	z = math.floor(z)
+
+	local row = water_cache[x]
+
+	if not row then
+		row = {}
+		water_cache[x] = row
+	end
+
+	local water = row[z]
+
+	if water == nil then
+
+		local start_time = profile_start(profile)
+
+		water = lottmapgen.get_water(x, z)
+		row[z] = water
+
+		profile_finish(profile, "water_time", start_time)
+		profile_add(profile, "water_samples", 1)
+	end
+
+	return water
+end
+
+
+-- checks whether one river sample intersects the cave footprint
+local function worm_cave_river_sample(
+	x,
+	z,
+	water_cache,
+	profile
+)
+
+	local water_mask = get_cached_water(
+		x,
+		z,
+		water_cache,
+		profile
+	)
+
+	local river_strength = 1 - water_mask
+
+	river_strength = lottmapgen.smoothstep(
+		0.2,
+		0.8,
+		river_strength
+	)
+
+	return river_strength > 0
+end
+
+
 -- checks whether the worm cave footprint overlaps river carving
-local function worm_cave_near_river(x, z, radius)
+local function worm_cave_near_river(
+	x,
+	z,
+	radius,
+	water_cache,
+	profile
+)
+
+	local start_time = profile_start(profile)
+
+	profile_add(profile, "river_checks", 1)
 
 	local sample_radius = math.ceil(radius)
 	local diagonal_radius = math.ceil(sample_radius * 0.707)
 
-	local checks = {
-		{x = 0, z = 0},
+	local sample_x = math.floor(x)
+	local sample_z = math.floor(z)
 
-		{x = sample_radius, z = 0},
-		{x = -sample_radius, z = 0},
-		{x = 0, z = sample_radius},
-		{x = 0, z = -sample_radius},
+	if worm_cave_river_sample(
+		sample_x,
+		sample_z,
+		water_cache,
+		profile
+	) then
 
-		{x = diagonal_radius, z = diagonal_radius},
-		{x = diagonal_radius, z = -diagonal_radius},
-		{x = -diagonal_radius, z = diagonal_radius},
-		{x = -diagonal_radius, z = -diagonal_radius}
-	}
-
-	for i = 1, #checks do
-
-		local check = checks[i]
-
-		local water_mask = lottmapgen.get_water(
-			math.floor(x + check.x),
-			math.floor(z + check.z)
-		)
-
-		local river_strength = 1 - water_mask
-
-		river_strength = lottmapgen.smoothstep(
-			0.2,
-			0.8,
-			river_strength
-		)
-
-		if river_strength > 0 then
-			return true
-		end
+		profile_finish(profile, "river_time", start_time)
+		return true
 	end
+
+	if worm_cave_river_sample(
+		sample_x + sample_radius,
+		sample_z,
+		water_cache,
+		profile
+	) then
+
+		profile_finish(profile, "river_time", start_time)
+		return true
+	end
+
+	if worm_cave_river_sample(
+		sample_x - sample_radius,
+		sample_z,
+		water_cache,
+		profile
+	) then
+
+		profile_finish(profile, "river_time", start_time)
+		return true
+	end
+
+	if worm_cave_river_sample(
+		sample_x,
+		sample_z + sample_radius,
+		water_cache,
+		profile
+	) then
+
+		profile_finish(profile, "river_time", start_time)
+		return true
+	end
+
+	if worm_cave_river_sample(
+		sample_x,
+		sample_z - sample_radius,
+		water_cache,
+		profile
+	) then
+
+		profile_finish(profile, "river_time", start_time)
+		return true
+	end
+
+	if worm_cave_river_sample(
+		sample_x + diagonal_radius,
+		sample_z + diagonal_radius,
+		water_cache,
+		profile
+	) then
+
+		profile_finish(profile, "river_time", start_time)
+		return true
+	end
+
+	if worm_cave_river_sample(
+		sample_x + diagonal_radius,
+		sample_z - diagonal_radius,
+		water_cache,
+		profile
+	) then
+
+		profile_finish(profile, "river_time", start_time)
+		return true
+	end
+
+	if worm_cave_river_sample(
+		sample_x - diagonal_radius,
+		sample_z + diagonal_radius,
+		water_cache,
+		profile
+	) then
+
+		profile_finish(profile, "river_time", start_time)
+		return true
+	end
+
+	if worm_cave_river_sample(
+		sample_x - diagonal_radius,
+		sample_z - diagonal_radius,
+		water_cache,
+		profile
+	) then
+
+		profile_finish(profile, "river_time", start_time)
+		return true
+	end
+
+	profile_finish(profile, "river_time", start_time)
 
 	return false
 end
@@ -402,24 +605,179 @@ end
 -- WORM CAVE SPHERE CARVING
 -- =========================
 
-local function carve_worm_cave_sphere(
+-- normal cave spheres accumulate their union directly into the current mapgen area
+-- each voxel keeps only the strongest sphere influence before shape noise is sampled
+local function accumulate_worm_cave_sphere(
 	cx,
 	cy,
 	cz,
 	radius,
-	surface_opening,
 	minp,
 	maxp,
 	area,
-	data,
-	cave_data
+	worm_carve,
+	profile
 )
 
 	if radius <= 0 then
 		return
 	end
 
-	local stone_ring = surface_opening and WORM_CAVE_ENTRANCE_STONE_RING or 0
+	local carve_start = profile_start(profile)
+
+	profile_add(profile, "carve_calls", 1)
+
+	local max_radius = radius * (1 + WORM_CAVE_DEFORMATION)
+	local max_radius_sq = max_radius * max_radius
+	local radius_sq = radius * radius
+
+	if cx + max_radius < minp.x
+	or cx - max_radius > maxp.x
+	or cy + max_radius < minp.y
+	or cy - max_radius > maxp.y
+	or cz + max_radius < minp.z
+	or cz - max_radius > maxp.z then
+		profile_finish(profile, "carve_time", carve_start)
+		return
+	end
+
+	local xmin = math.max(math.floor(cx - max_radius), minp.x)
+	local xmax = math.min(math.ceil(cx + max_radius), maxp.x)
+	local ymin = math.max(math.floor(cy - max_radius), minp.y)
+	local ymax = math.min(math.ceil(cy + max_radius), maxp.y)
+	local zmin = math.max(math.floor(cz - max_radius), minp.z)
+	local zmax = math.min(math.ceil(cz + max_radius), maxp.z)
+
+	local ystride = area.ystride
+
+	for z = zmin, zmax do
+
+		local dz = z - cz
+		local dz_sq = dz * dz
+
+		for x = xmin, xmax do
+
+			local dx = x - cx
+			local horizontal_sq = dx * dx + dz_sq
+
+			if horizontal_sq <= max_radius_sq then
+
+				local vertical_radius = math.sqrt(max_radius_sq - horizontal_sq)
+				local column_ymin = math.max(math.ceil(cy - vertical_radius), ymin)
+				local column_ymax = math.min(math.floor(cy + vertical_radius), ymax)
+
+				local vi = area:index(x, column_ymin, z)
+
+				for y = column_ymin, column_ymax do
+
+					local dy = y - cy
+					local distance_sq = horizontal_sq + dy * dy
+					local influence = distance_sq / radius_sq
+
+					profile_add(profile, "voxel_candidates", 1)
+
+					local current_influence = worm_carve[vi]
+
+					if current_influence == nil
+					or influence < current_influence then
+						worm_carve[vi] = influence
+					end
+
+					vi = vi + ystride
+				end
+			end
+		end
+	end
+
+	profile_finish(profile, "carve_time", carve_start)
+end
+
+
+-- resolves the accumulated cave union once per unique candidate voxel
+local function resolve_worm_cave_carving(
+	area,
+	data,
+	cave_data,
+	worm_carve,
+	shape_cache,
+	profile
+)
+
+	local carve_start = profile_start(profile)
+
+	for vi, influence in pairs(worm_carve) do
+
+		profile_add(profile, "unique_voxels", 1)
+
+		local pos = area:position(vi)
+		local deformation = shape_cache[vi]
+
+		if deformation == nil then
+
+			deformation = worm_cave_shape_noise:get_3d({
+				x = pos.x,
+				y = pos.y,
+				z = pos.z
+			})
+
+			shape_cache[vi] = deformation
+			profile_add(profile, "noise_3d_samples", 1)
+		end
+
+		local radius_multiplier = 1 + deformation * WORM_CAVE_DEFORMATION
+		local radius_multiplier_sq = radius_multiplier * radius_multiplier
+
+		if influence <= radius_multiplier_sq then
+
+			local current = data[vi]
+
+			if current == c_stone
+			or current == c_morstone then
+
+				data[vi] = c_air
+				profile_add(profile, "nodes_carved", 1)
+
+				lottmapgen.mark_cave_node(
+					pos.x,
+					pos.y,
+					pos.z,
+					vi,
+					"worm",
+					cave_data
+				)
+			end
+		end
+	end
+
+	profile_finish(profile, "carve_time", carve_start)
+end
+
+
+-- surface openings keep their original immediate carving and stone ring handling
+local function carve_worm_cave_surface_sphere(
+	cx,
+	cy,
+	cz,
+	radius,
+	minp,
+	maxp,
+	area,
+	data,
+	cave_data,
+	terrain_cache,
+	shape_cache,
+	profile
+)
+
+	if radius <= 0 then
+		return
+	end
+
+	local carve_start = profile_start(profile)
+
+	profile_add(profile, "carve_calls", 1)
+
+	local stone_ring = WORM_CAVE_ENTRANCE_STONE_RING
 
 	local max_radius = radius * (1 + WORM_CAVE_DEFORMATION) + stone_ring
 	local max_radius_sq = max_radius * max_radius
@@ -430,6 +788,8 @@ local function carve_worm_cave_sphere(
 	or cy - max_radius > maxp.y
 	or cz + max_radius < minp.z
 	or cz - max_radius > maxp.z then
+
+		profile_finish(profile, "carve_time", carve_start)
 		return
 	end
 
@@ -449,61 +809,78 @@ local function carve_worm_cave_sphere(
 			local dz = z - cz
 			local horizontal_sq = dx * dx + dz * dz
 
-			local surface_y
-
-			if surface_opening then
-				surface_y = lottmapgen.get_terrain_height(x, z)
-			end
-
 			if horizontal_sq <= max_radius_sq then
-				for y = ymin, ymax do
+
+				local surface_y = get_cached_terrain_height(
+					x,
+					z,
+					terrain_cache,
+					profile
+				)
+
+				local vertical_radius = math.sqrt(max_radius_sq - horizontal_sq)
+				local column_ymin = math.max(math.ceil(cy - vertical_radius), ymin)
+				local column_ymax = math.min(math.floor(cy + vertical_radius), ymax)
+
+				local vi = area:index(x, column_ymin, z)
+
+				for y = column_ymin, column_ymax do
 
 					local dy = y - cy
 					local distance_sq = horizontal_sq + dy * dy
 
-					if distance_sq <= max_radius_sq then
+					profile_add(profile, "voxel_candidates", 1)
 
-						local deformation = worm_cave_shape_noise:get_3d({
+					local deformation = shape_cache[vi]
+
+					if deformation == nil then
+
+						deformation = worm_cave_shape_noise:get_3d({
 							x = x,
 							y = y,
 							z = z
 						})
 
-						local local_radius = radius + deformation * radius * WORM_CAVE_DEFORMATION
+						shape_cache[vi] = deformation
+						profile_add(profile, "noise_3d_samples", 1)
+					end
+
+					local local_radius = radius + deformation * radius * WORM_CAVE_DEFORMATION
+					local local_radius_sq = local_radius * local_radius
+
+					local current = data[vi]
+
+					if distance_sq <= local_radius_sq then
+
+						local carveable =
+							current == c_stone
+							or current == c_morstone
+
+						if current ~= c_air
+						and current ~= c_water then
+							carveable = true
+						end
+
+						if carveable then
+
+							data[vi] = c_air
+							profile_add(profile, "nodes_carved", 1)
+
+							lottmapgen.mark_cave_node(
+								x,
+								y,
+								z,
+								vi,
+								"worm",
+								cave_data
+							)
+						end
+
+					else
+
 						local stone_radius = local_radius + stone_ring
 
-						local vi = area:index(x, y, z)
-						local current = data[vi]
-
-						if distance_sq <= local_radius * local_radius then
-
-							local carveable =
-								current == c_stone
-								or current == c_morstone
-
-							-- only the entrance mouth may cut through surface terrain
-							if surface_opening
-							and current ~= c_air
-							and current ~= c_water then
-								carveable = true
-							end
-
-							if carveable then
-
-								data[vi] = c_air
-
-								lottmapgen.mark_cave_node(
-									x,
-									y,
-									z,
-									vi,
-									"worm",
-									cave_data
-								)
-							end
-
-						elseif surface_opening
-						and distance_sq <= stone_radius * stone_radius
+						if distance_sq <= stone_radius * stone_radius
 						and current ~= c_air
 						and current ~= c_water
 						and y >= surface_y - WORM_CAVE_ENTRANCE_STONE_DEPTH
@@ -543,10 +920,14 @@ local function carve_worm_cave_sphere(
 							end
 						end
 					end
+
+					vi = vi + area.ystride
 				end
 			end
 		end
 	end
+
+	profile_finish(profile, "carve_time", carve_start)
 end
 
 
@@ -565,7 +946,10 @@ local function move_worm_cave_down(
 	maxp,
 	area,
 	data,
-	cave_data
+	cave_data,
+	terrain_cache,
+	worm_carve,
+	profile
 )
 
 	while y - target_y > WORM_CAVE_MAX_DESCENT_PER_STEP do
@@ -580,17 +964,18 @@ local function move_worm_cave_down(
 			maxp
 		) then
 
-			carve_worm_cave_sphere(
+			profile_add(profile, "near_spheres", 1)
+
+			accumulate_worm_cave_sphere(
 				x,
 				y,
 				z,
 				radius,
-				false,
 				minp,
 				maxp,
 				area,
-				data,
-				cave_data
+				worm_carve,
+				profile
 			)
 		end
 	end
@@ -602,6 +987,48 @@ end
 -- =========================
 -- WORM CAVE PATH GENERATION
 -- =========================
+
+-- cheaply previews the actual horizontal path before doing terrain and carving work
+-- this keeps long winding caves while rejecting paths that never approach this chunk
+local function worm_cave_path_can_reach_chunk(
+	start_x,
+	start_z,
+	angle,
+	steps,
+	path_type,
+	minp,
+	maxp
+)
+
+	local x = start_x
+	local z = start_z
+
+	local margin = WORM_CAVE_MAX_CARVE_RADIUS + 2
+	local turn_strength = get_worm_cave_path_turn_strength(path_type)
+
+	local xmin = minp.x - margin
+	local xmax = maxp.x + margin
+	local zmin = minp.z - margin
+	local zmax = maxp.z + margin
+
+	for step = 1, steps do
+
+		local path_value = get_worm_cave_path_value(path_type, x, z)
+		angle = angle + path_value * turn_strength
+
+		if x >= xmin
+		and x <= xmax
+		and z >= zmin
+		and z <= zmax then
+			return true
+		end
+
+		x = x + math.cos(angle) * WORM_CAVE_STEP_LENGTH
+		z = z + math.sin(angle) * WORM_CAVE_STEP_LENGTH
+	end
+
+	return false
+end
 
 local function generate_worm_cave_path(
 	start_x,
@@ -617,21 +1044,32 @@ local function generate_worm_cave_path(
 	maxp,
 	area,
 	data,
-	cave_data
+	cave_data,
+	terrain_cache,
+	water_cache,
+	worm_carve,
+	shape_cache,
+	profile
 )
+
+	profile_add(profile, "paths", 1)
 
 	local x = start_x
 	local y = start_y
 	local z = start_z
 
-	local entrance_ground_y = lottmapgen.get_terrain_height(
-		math.floor(start_x),
-		math.floor(start_z)
+	local entrance_ground_y = get_cached_terrain_height(
+		start_x,
+		start_z,
+		terrain_cache,
+		profile
 	)
 
 	local turn_strength = get_worm_cave_path_turn_strength(path_type)
 
 	for step = 1, steps do
+
+		profile_add(profile, "steps", 1)
 
 		local path_value = get_worm_cave_path_value(path_type, x, z)
 		angle = angle + path_value * turn_strength
@@ -649,15 +1087,6 @@ local function generate_worm_cave_path(
 			step,
 			size_phase,
 			size_rate
-		)
-
-		-- path state must always be reconstructed before chunk rejection
-		local sample_x = math.floor(x)
-		local sample_z = math.floor(z)
-
-		local ground_y = lottmapgen.get_terrain_height(
-			sample_x,
-			sample_z
 		)
 
 		local maximum_radius = radius * (1 + WORM_CAVE_DEFORMATION)
@@ -703,7 +1132,9 @@ local function generate_worm_cave_path(
 			local near_river = worm_cave_near_river(
 				x,
 				z,
-				river_radius
+				river_radius,
+				water_cache,
+				profile
 			)
 
 			if near_river then
@@ -725,7 +1156,10 @@ local function generate_worm_cave_path(
 						maxp,
 						area,
 						data,
-						cave_data
+						cave_data,
+						terrain_cache,
+						worm_carve,
+						profile
 					)
 				end
 
@@ -736,12 +1170,21 @@ local function generate_worm_cave_path(
 
 		else
 
+			local ground_y = get_cached_terrain_height(
+				x,
+				z,
+				terrain_cache,
+				profile
+			)
+
 			local safe_surface_y = ground_y
 
 			local near_river = worm_cave_near_river(
 				x,
 				z,
-				river_radius
+				river_radius,
+				water_cache,
+				profile
 			)
 
 			if near_river then
@@ -768,21 +1211,26 @@ local function generate_worm_cave_path(
 					maxp,
 					area,
 					data,
-					cave_data
+					cave_data,
+					terrain_cache,
+					worm_carve,
+					profile
 				)
 			end
 		end
 
-		-- report one point inside each surface throat for forced cave decoration
-		if surface_path
-		and step == WORM_CAVE_ENTRANCE_DECO_STEP
-		and worm_cave_point_near_chunk(
+		local near_chunk = worm_cave_point_near_chunk(
 			x,
 			y,
 			z,
 			minp,
 			maxp
-		) then
+		)
+
+		-- report one point inside each surface throat for forced cave decoration
+		if surface_path
+		and step == WORM_CAVE_ENTRANCE_DECO_STEP
+		and near_chunk then
 
 			report_worm_cave_surface_opening(
 				x,
@@ -792,26 +1240,41 @@ local function generate_worm_cave_path(
 			)
 		end
 
-		if worm_cave_point_near_chunk(
-			x,
-			y,
-			z,
-			minp,
-			maxp
-		) then
+		if near_chunk then
 
-			carve_worm_cave_sphere(
-				x,
-				y,
-				z,
-				carve_radius,
-				surface_opening,
-				minp,
-				maxp,
-				area,
-				data,
-				cave_data
-			)
+			profile_add(profile, "near_spheres", 1)
+
+			if surface_opening then
+
+				carve_worm_cave_surface_sphere(
+					x,
+					y,
+					z,
+					carve_radius,
+					minp,
+					maxp,
+					area,
+					data,
+					cave_data,
+					terrain_cache,
+					shape_cache,
+					profile
+				)
+
+			else
+
+				accumulate_worm_cave_sphere(
+					x,
+					y,
+					z,
+					carve_radius,
+					minp,
+					maxp,
+					area,
+					worm_carve,
+					profile
+				)
+			end
 		end
 
 		x = x + math.cos(angle) * WORM_CAVE_STEP_LENGTH
@@ -833,7 +1296,43 @@ function lottmapgen.generate_worm_caves(
 	cave_data
 )
 
+	local total_start
+	local profile
+
+	if WORM_CAVE_PROFILING then
+
+		total_start = core.get_us_time()
+
+		profile = {
+			paths = 0,
+			skipped_paths = 0,
+			steps = 0,
+
+			near_spheres = 0,
+			carve_calls = 0,
+
+			voxel_candidates = 0,
+			unique_voxels = 0,
+			noise_3d_samples = 0,
+			nodes_carved = 0,
+
+			terrain_samples = 0,
+			water_samples = 0,
+			river_checks = 0,
+
+			terrain_time = 0,
+			water_time = 0,
+			river_time = 0,
+			carve_time = 0
+		}
+	end
 	ensure_worm_cave_noises()
+
+	-- caches only live for this mapgen call
+	local terrain_cache = {}
+	local water_cache = {}
+	local worm_carve = {}
+	local shape_cache = {}
 
 	local min_cell_x = math.floor(minp.x / WORM_CAVE_CELL_SIZE)
 	local max_cell_x = math.floor(maxp.x / WORM_CAVE_CELL_SIZE)
@@ -863,9 +1362,11 @@ function lottmapgen.generate_worm_caves(
 				-- worm caves may travel beneath ocean biomes but never originate in them
 				if biome_id ~= 1 then
 
-					local ground_y = lottmapgen.get_terrain_height(
+					local ground_y = get_cached_terrain_height(
 						start_x,
-						start_z
+						start_z,
+						terrain_cache,
+						profile
 					)
 
 					local surface_path =
@@ -912,24 +1413,82 @@ function lottmapgen.generate_worm_caves(
 					local size_phase = pr:next(0, 6283) / 1000
 					local size_rate = pr:next(120, 240) / 1000
 
-					generate_worm_cave_path(
+					if worm_cave_path_can_reach_chunk(
 						start_x,
-						start_y,
 						start_z,
 						angle,
 						steps,
 						path_type,
-						size_phase,
-						size_rate,
-						surface_path,
 						minp,
-						maxp,
-						area,
-						data,
-						cave_data
-					)
+						maxp
+					) then
+
+						generate_worm_cave_path(
+							start_x,
+							start_y,
+							start_z,
+							angle,
+							steps,
+							path_type,
+							size_phase,
+							size_rate,
+							surface_path,
+							minp,
+							maxp,
+							area,
+							data,
+							cave_data,
+							terrain_cache,
+							water_cache,
+							worm_carve,
+							shape_cache,
+							profile
+						)
+
+					else
+						profile_add(profile, "skipped_paths", 1)
+					end
 				end
 			end
 		end
+	end
+
+	resolve_worm_cave_carving(
+		area,
+		data,
+		cave_data,
+		worm_carve,
+		shape_cache,
+		profile
+	)
+
+	if WORM_CAVE_PROFILING then
+		local total_time = core.get_us_time() - total_start
+		local other_time = total_time - profile.carve_time - profile.river_time
+	
+		core.log(
+			"warning",
+			string.format(
+				"[lottmapgen] worm profile y=%d..%d | total=%.2f ms | carve=%.2f ms | river=%.2f ms | other=%.2f ms | paths=%d | skipped=%d | steps=%d | spheres=%d | voxels=%d | unique=%d | noise3d=%d | carved=%d | terrain=%d/%.2f ms | water=%d/%.2f ms",
+				minp.y,
+				maxp.y,
+				total_time / 1000,
+				profile.carve_time / 1000,
+				profile.river_time / 1000,
+				other_time / 1000,
+				profile.paths,
+				profile.skipped_paths,
+				profile.steps,
+				profile.near_spheres,
+				profile.voxel_candidates,
+				profile.unique_voxels,
+				profile.noise_3d_samples,
+				profile.nodes_carved,
+				profile.terrain_samples,
+				profile.terrain_time / 1000,
+				profile.water_samples,
+				profile.water_time / 1000
+			)
+		)
 	end
 end

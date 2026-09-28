@@ -12,6 +12,11 @@ dofile(minetest.get_modpath("lottmapgen").."/worldedit.lua")
 dofile(minetest.get_modpath("lottmapgen").."/schematics.lua")
 
 -- =========================
+-- PROFILING
+-- =========================
+local CAVE_PROFILING = false
+
+-- =========================
 -- MAP SETTINGS
 -- =========================
 lottmapgen.MAP_WIDTH = meta.width
@@ -88,10 +93,27 @@ function lottmapgen.generate_caves(
 	data
 )
 
+	local total_start
+
+	if CAVE_PROFILING then
+		total_start = core.get_us_time()
+	end
+
 	local cave_data = {
 		nodes = {},
 		mask = {}
 	}
+
+
+	-- =========================
+	-- WORM CAVES
+	-- =========================
+
+	local start_time
+
+	if CAVE_PROFILING then
+		start_time = core.get_us_time()
+	end
 
 	lottmapgen.generate_worm_caves(
 		minp,
@@ -101,6 +123,21 @@ function lottmapgen.generate_caves(
 		cave_data
 	)
 
+	local worm_time
+
+	if CAVE_PROFILING then
+		worm_time = (core.get_us_time() - start_time) / 1000
+	end
+
+
+	-- =========================
+	-- CAVERNS
+	-- =========================
+
+	if CAVE_PROFILING then
+		start_time = core.get_us_time()
+	end
+
 	lottmapgen.generate_caverns(
 		minp,
 		maxp,
@@ -108,6 +145,21 @@ function lottmapgen.generate_caves(
 		data,
 		cave_data
 	)
+
+	local cavern_time
+
+	if CAVE_PROFILING then
+		cavern_time = (core.get_us_time() - start_time) / 1000
+	end
+
+
+	-- =========================
+	-- VAULT CAVES
+	-- =========================
+
+	if CAVE_PROFILING then
+		start_time = core.get_us_time()
+	end
 
 	lottmapgen.generate_vault_caves(
 		minp,
@@ -117,6 +169,21 @@ function lottmapgen.generate_caves(
 		cave_data
 	)
 
+	local vault_time
+
+	if CAVE_PROFILING then
+		vault_time = (core.get_us_time() - start_time) / 1000
+	end
+
+
+	-- =========================
+	-- CAVE SURFACES
+	-- =========================
+
+	if CAVE_PROFILING then
+		start_time = core.get_us_time()
+	end
+
 	lottmapgen.resolve_cave_surfaces(
 		minp,
 		maxp,
@@ -125,6 +192,21 @@ function lottmapgen.generate_caves(
 		cave_data
 	)
 
+	local surface_time
+
+	if CAVE_PROFILING then
+		surface_time = (core.get_us_time() - start_time) / 1000
+	end
+
+
+	-- =========================
+	-- CAVE DECORATIONS
+	-- =========================
+
+	if CAVE_PROFILING then
+		start_time = core.get_us_time()
+	end
+
 	lottmapgen.generate_cave_decorations(
 		minp,
 		maxp,
@@ -132,6 +214,37 @@ function lottmapgen.generate_caves(
 		data,
 		cave_data
 	)
+
+	local deco_time
+
+	if CAVE_PROFILING then
+		deco_time = (core.get_us_time() - start_time) / 1000
+	end
+
+
+	-- =========================
+	-- PROFILING
+	-- =========================
+
+	if CAVE_PROFILING then
+
+		local total_time = (core.get_us_time() - total_start) / 1000
+
+		core.log(
+			"warning",
+			string.format(
+				"[lottmapgen] caves y=%d..%d | worm=%.2f ms | cavern=%.2f ms | vault=%.2f ms | surface=%.2f ms | deco=%.2f ms | total=%.2f ms",
+				minp.y,
+				maxp.y,
+				worm_time,
+				cavern_time,
+				vault_time,
+				surface_time,
+				deco_time,
+				total_time
+			)
+		)
+	end
 end
 
 -- BIOME HANDLING
